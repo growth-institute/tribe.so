@@ -4,6 +4,7 @@
 
 	use Curl\Curl;
 	use GraphQL\Graph;
+	use ArrayIterator\ArrayIteratorFacade;
 
 	class Tribe {
 
@@ -47,7 +48,48 @@
 			return json_decode($response);
 		}
 
-		public function getPosts($space_ids, $fields = []) {
+		private function generateNodeFields($nodes, $fields) {
+
+			foreach($fields as $k => $field) {
+				if(is_int($k)) {
+					$nodes = $nodes->use($field);
+				} else {
+
+					$nodes = $nodes->$k;
+					if(is_array($field)) {
+
+						$nodes = $this->generateNodeFields($nodes, $field);
+					}
+				}
+			}
+
+			return $nodes;
+		}
+
+		private function getCollection($name, $fields = [], $params = [], $defaults = []) {
+
+			$instance = new Graph($name, array_merge($params, $defaults));
+
+			$instance->nodes
+				->prev()
+				->use('totalCount');
+
+			$nodes = $instance->nodes;
+
+			$nodes = $this->generateNodeFields($nodes, $fields);
+
+			$query = $instance->root()->query();
+			$response = $this->request($query);
+
+			if(isset($response->data->$name->nodes)) {
+
+				return $response->data->$name->nodes;
+			}
+
+			return $response;
+		}
+
+		public function getPosts($space_ids, $fields = [], $params = []) {
 
 			/*
 				query {
@@ -56,43 +98,55 @@
 			            title,
 			            id,
 			            postTypeId
+			            postType {
+			            	id
+			            }
 			        },
 			        totalCount
 			    }
 			}
 			*/
 
-			if(!$fields) {
-
-				$fields = ['id', 'title', 'postTypeId'];
+			if(!$params) {
+				$params = ['limit' => 100];
 			}
 
+			if(!$fields) {
+				$fields = [
+					'id',
+					'title',
+					'postTypeId',
+					'postType' => [
+						'id'
+					]
+				];
+			}
 
+			//Check if space id is string or array
 			if(is_string($space_ids)) $space_ids = [$space_ids];
 
+			return $this->getCollection('posts', $fields, $params, ['spaceIds' => $space_ids]);
+		}
 
-			$posts = new Graph('posts', ['limit' => 100, 'spaceIds' => $space_ids]);
+		public function getSpaces($fields = [], $params = []) {
 
-
-			$query = $posts->nodes
-						->use('title', 'id', 'postTypeId')
-						->prev()
-						->use('totalCount')
-						->root()
-							->query();
-
-			echo $query;
-			exit;
-
-			$response = $this->request($query);
-
-
-			if(isset($response->data->posts->nodes)) {
-
-				return $response->data->posts->nodes;
+			if(!$params) {
+				$params = ['limit' => 100];
 			}
 
-			return false;
+			if(!$fields) {
+				$fields = [
+					'id',
+					'name',
+					'postsCount'
+				];
+			}
+
+			return $this->getCollection('spaces', $fields, $params);
+		}
+
+		public function createPost($space_ids, $fields = [], $params = []) {
+
 		}
 	}
 ?>
