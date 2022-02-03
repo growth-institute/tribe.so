@@ -4,8 +4,60 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "61ff9fc5aa29d7ddb16e1fd6ff2132a9",
+    "content-hash": "ad6946971d761340340a385fc278e852",
     "packages": [
+        {
+            "name": "cfpinto/graphql",
+            "version": "v1.0.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/cfpinto/graphql.git",
+                "reference": "ff7ce97f0074dee2fa11b4e2d13bd3b74a86b2b2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/cfpinto/graphql/zipball/ff7ce97f0074dee2fa11b4e2d13bd3b74a86b2b2",
+                "reference": "ff7ce97f0074dee2fa11b4e2d13bd3b74a86b2b2",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "php": ">=7.4"
+            },
+            "require-dev": {
+                "phpmd/phpmd": "^2.10",
+                "phpunit/phpunit": "^8",
+                "squizlabs/php_codesniffer": "^3.6",
+                "symfony/var-dumper": "^5.1"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "GraphQL\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Claudio Pinto",
+                    "email": "me@cfpinto.com"
+                }
+            ],
+            "description": "A GraphQL query builder class",
+            "homepage": "https://github.com/cfpinto/graphql",
+            "keywords": [
+                "graphql",
+                "query builder"
+            ],
+            "support": {
+                "issues": "https://github.com/cfpinto/graphql/issues",
+                "source": "https://github.com/cfpinto/graphql/tree/v1.0.3"
+            },
+            "time": "2022-01-24T15:10:31+00:00"
+        },
         {
             "name": "curl/curl",
             "version": "2.3.3",

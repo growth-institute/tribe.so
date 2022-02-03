@@ -1,21 +1,26 @@
 {
-    "name": "growthinstitute/tribe.so",
-    "description": "Tribe.so library for PHP",
-    "type": "library",
-    "require": {
-        "curl/curl": "^2.3"
-    },
-    "license": "MIT",
-    "autoload": {
-        "psr-4": {
-            "Growthinstitute\\TribeSo\\": "src/"
-        }
-    },
-    "authors": [
-        {
-            "name": "Jesus",
-            "email": "jesus@growthinstitute.com"
-        }
-    ],
-    "minimum-stability": "stable"
+	"name": "growth-institute/tribe-php",
+	"description": "PHP library for Tribe",
+	"type": "library",
+	"license": "MIT",
+	"autoload": {
+		"psr-4": {
+			"TribePHP\\": "src/"
+		}
+	},
+	"authors": [
+		{
+			"name": "Rodrigo Tejero",
+			"email": "rodrigo@growthinstitute.com"
+		},
+		{
+			"name": "Jesus Batallar",
+			"email": "jesus@growthinstitute.com"
+		}
+	],
+	"minimum-stability": "stable",
+	"require": {
+		"curl/curl": "^2.3",
+		"cfpinto/graphql": "^1.0"
+	}
 }
