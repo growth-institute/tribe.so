@@ -4,7 +4,8 @@
 
 	use Curl\Curl;
 	use GraphQL\Graph;
-	use ArrayIterator\ArrayIteratorFacade;
+	use GraphQL\Mutation;
+	use GraphQL\Variable;
 
 	class Tribe {
 
@@ -89,22 +90,51 @@
 			return $response;
 		}
 
+		private function createInstance($name, $fields = [], $variables = [], $params = []) {
+
+			$mutation = new Mutation($name, array_merge($fields, [ 'input'=> new Variable('input', ucwords($name) . 'Input!', '') ]));
+
+			$query = $this->generateNodeFields($mutation, $params);
+
+			$query = $query->root()->query();
+
+			$response = $this->request($query, $variables);
+
+			if(isset($response->data->$name)) {
+
+				return $response->data->$name;
+			}
+
+			return $response;
+		}
+
+		private function mappingField($name, $type, $value) {
+
+			if(in_array($type, ['text', 'html'])) $value = "\"{$value}\"";
+
+			return [
+				'key' => $name,
+				'type' => $type,
+				'value' => $value
+			];
+		}
+
 		public function getPosts($space_ids, $fields = [], $params = []) {
 
 			/*
 				query {
-			    posts(limit: 100, spaceIds: ["0fihjgNW2UaH"]) {
-			        nodes {
-			            title,
-			            id,
-			            postTypeId
-			            postType {
-			            	id
-			            }
-			        },
-			        totalCount
-			    }
-			}
+					posts(limit: 100, spaceIds: ["0fihjgNW2UaH"]) {
+						nodes {
+							title,
+							id,
+							postTypeId
+							postType {
+								id
+							}
+						},
+						totalCount
+					}
+				}
 			*/
 
 			if(!$params) {
@@ -145,8 +175,42 @@
 			return $this->getCollection('spaces', $fields, $params);
 		}
 
-		public function createPost($space_ids, $fields = [], $params = []) {
+		public function createPost($space_id, $title, $content, $params = [], $fields = []) {
 
+			/*
+			mutation($input: CreatePostInput!) {
+				createPost(
+					input: $input
+					spaceId: "0fihjgNW2UaH"
+				) {
+					id
+				}
+			}
+
+			mutation CreatePostMutation($input: CreatePostInput!) {
+				createPost(
+					spaceId: "0fihjgNW2UaH"
+					input: $input
+				) {
+					id
+				}
+			}
+			*/
+
+			$fields = array_merge(['spaceId' => $space_id], $fields);
+
+			$variables = [
+				'input' => [
+					'postTypeId' => 'udE3pz9DBGv7nsr',
+					'publish' => true,
+					'mappingFields' => [
+						$this->mappingField('title', 'text', $title),
+						$this->mappingField('content', 'html', $content)
+					]
+				]
+			];
+
+			return $this->createInstance('createPost', $fields, $variables, $params);
 		}
 	}
 ?>

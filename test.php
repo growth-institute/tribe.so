@@ -31,7 +31,10 @@
 	//print_a($tribe->getPosts(['0fihjgNW2UaH'], $post_with_mapping));
 
 
-	print_a($tribe->getSpaces());
+	//print_a($tribe->getSpaces());
+
+
+	print_a($tribe->createPost('0fihjgNW2UaH', 'Prueba con Jesus', '<p>Ayyyyyyyy wey!!!</p>', $post_with_mapping));
 
 
 ?>
