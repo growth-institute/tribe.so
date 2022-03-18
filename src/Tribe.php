@@ -28,6 +28,13 @@
 				  accessToken
 				}
 			  } */
+
+			  $arguments = [
+				"context" => 'network', 
+				"networkId" => $networkId, 
+				"entityId" => $networkId
+			  ];
+			  
 			  $instance = new Graph('limitedToken', $arguments);
 			  $query = $this->generateNodeFields($instance, ['accessToken']);
 			  $query = $instance->root()->query();			
