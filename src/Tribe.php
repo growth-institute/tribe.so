@@ -28,6 +28,13 @@
 				  accessToken
 				}
 			  } */
+
+			  $arguments = [
+				"context" => 'network', 
+				"networkId" => $networkId, 
+				"entityId" => $networkId
+			  ];
+			  
 			  $instance = new Graph('limitedToken', $arguments);
 			  $query = $this->generateNodeFields($instance, ['accessToken']);
 			  $query = $instance->root()->query();			
@@ -69,7 +76,7 @@
 			return json_decode($response);
 		}
 
-		private  function generateNodeFields($nodes, $fields) {
+		private function generateNodeFields($nodes, $fields) {
 
 			foreach($fields as $k => $field) {
 				if(is_int($k)) {
