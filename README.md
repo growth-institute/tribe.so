@@ -1,29 +1,31 @@
-![Circle.so for PHP](https://i.imgur.com/xX7p6zl.png)
+![Tribe.so for PHP](https://i.imgur.com/ydKvAlA.png)
 
-# Circle.so for PHP
+# Tribe.so for PHP
 
 ## What is this?
 
-This library is a PHP tool to integrate [Circle](https://www.circle.so/) API into your projects. Circle.so documentation can be found [here](https://api.circle.so).
+This library is a PHP tool to integrate [Tribe](https://www.tribe.so/) API into your projects. Tribe.so documentation can be found [here](https://partners.tribe.so/docs/guide/index/).
 
 ## How to use it
 
-Simply require the package with `composer add growth-institute/circle.so-php`.
+Simply require the package with `composer require growth-institute/tribe.so-php`.
 
-Don't forget to include your vendor `autoload.php`. Then you will be able to instantiate a Circle object. The constructor receives the _Circle API Key_ as its only parameter. Example:
+Tribe API works with a GraphQL API, very different stuff than a REST API.
+
+Don't forget to include your vendor `autoload.php`. Then you will be able to instantiate a Tribe object. The constructor receives the _Tribe APP Bearer_ as its only parameter. Example:
 
 ```php
 <?php
 
 	include('vendor/autoload.php');
-	use CirclePHP\Circle;
+	use TribePHP\Tribe;
 
-	$circle = new Circle('your token here');
+	$tribe = new Tribe('your token here');
 
-	$communities = $addevent->communities();
+	$spaces = $tribe->getSpaces();
 
 	echo "<pre>";
-	print_r($communities);
+	print_r($spaces);
 	echo "</pre>";
 ?>
 ```

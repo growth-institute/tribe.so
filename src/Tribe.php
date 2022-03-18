@@ -69,7 +69,7 @@
 			return json_decode($response);
 		}
 
-		private  function generateNodeFields($nodes, $fields) {
+		private function generateNodeFields($nodes, $fields) {
 
 			foreach($fields as $k => $field) {
 				if(is_int($k)) {
@@ -177,6 +177,7 @@
 
 			return $this->getCollection('posts', $fields, $params, ['spaceIds' => $space_ids]);
 		}
+<<<<<<< HEAD
 
 		public function getSpaces($fields = [], $params = []) {
 
@@ -209,13 +210,34 @@
 			$query = $instance->root()->query();			
 			$response = $this->request($query);
 			return $response;
+=======
+
+		public function getSpaces($fields = [], $params = []) {
+
+			if(!$params) {
+				$params = ['limit' => 100];
+			}
+
+			if(!$fields) {
+				$fields = [
+					'id',
+					'name',
+					'postsCount'
+				];
+			}
+
+			return $this->getCollection('spaces', $fields, $params);
+>>>>>>> a8e89ce4418ed0422beda5534cc24a2da48a2c39
 		}
 
 		public function createPost($space_id, $title, $content, $params = [], $fields = []) {
 
+<<<<<<< HEAD
 			/*  Params lo que quieres saber */
 			/*  Fields parametros de un solo nivel*/
 			/*  Variables parametros de varios niveles */
+=======
+>>>>>>> a8e89ce4418ed0422beda5534cc24a2da48a2c39
 			/*
 			mutation($input: CreatePostInput!) {
 				createPost(
@@ -235,6 +257,7 @@
 				}
 			}
 			*/
+<<<<<<< HEAD
 
 			$fields = array_merge(['spaceId' => $space_id], $fields);
 
@@ -259,6 +282,23 @@
 				'input' => $variables
 			];
 			return $this->createInstance('createSpace', $fields, $variables, $params);
+=======
+
+			$fields = array_merge(['spaceId' => $space_id], $fields);
+
+			$variables = [
+				'input' => [
+					'postTypeId' => 'udE3pz9DBGv7nsr',
+					'publish' => true,
+					'mappingFields' => [
+						$this->mappingField('title', 'text', $title),
+						$this->mappingField('content', 'html', $content)
+					]
+				]
+			];
+
+			return $this->createInstance('createPost', $fields, $variables, $params);
+>>>>>>> a8e89ce4418ed0422beda5534cc24a2da48a2c39
 		}
 	}
 ?>
