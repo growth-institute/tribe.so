@@ -18,29 +18,37 @@
 		}
 
 		public function getAppToken($networkId){
-/* 			query {
-				limitedToken(
-				  context:NETWORK, 
-				  networkId: "{networkId}", 
-				  entityId: "{networkId}", 
-				  impersonateMemberId: "{memberId}"
-				) {
-				  accessToken
-				}
-			  } */
-
-			  $arguments = [
-				"context" => 'network', 
+			$arguments = [
+				"context" => "NETWORK",
 				"networkId" => $networkId, 
 				"entityId" => $networkId
-			  ];
-			  
-			  $instance = new Graph('limitedToken', $arguments);
-			  $query = $this->generateNodeFields($instance, ['accessToken']);
-			  $query = $instance->root()->query();			
-			  $response = $this->request($query);
-			  return $response;
+			];
+			$params = ["accessToken"];
+			$instance = new Graph('limitedToken', $arguments);
+			$query = $this->generateNodeFields($instance, $params);
+			$query = $instance->root()->query();			
+			$response = $this->request($query);
+			return $response;
+		}
 
+		public function getMembers(){
+			$arguments = [
+				"limit" => 100000
+			];
+			$params = [
+				"totalCount",
+				"nodes" => [
+					"id",
+					"name",
+					"email",
+					"username"
+				]
+			];
+			$instance = new Graph('members', $arguments);
+			$query = $this->generateNodeFields($instance, $params);
+			$query = $instance->root()->query();			
+			$response = $this->request($query);
+			return $response->data;
 		}
 		private function request($query, $variables = []) {
 
@@ -148,22 +156,6 @@
 
 		public function getPosts($space_ids, $fields = [], $params = []) {
 
-			/*
-				query {
-					posts(limit: 100, spaceIds: ["0fihjgNW2UaH"]) {
-						nodes {
-							title,
-							id,
-							postTypeId
-							postType {
-								id
-							}
-						},
-						totalCount
-					}
-				}
-			*/
-
 			if(!$params) {
 				$params = ['limit' => 100];
 			}
@@ -184,7 +176,6 @@
 
 			return $this->getCollection('posts', $fields, $params, ['spaceIds' => $space_ids]);
 		}
-<<<<<<< HEAD
 
 		public function getSpaces($fields = [], $params = []) {
 
@@ -217,54 +208,9 @@
 			$query = $instance->root()->query();			
 			$response = $this->request($query);
 			return $response;
-=======
-
-		public function getSpaces($fields = [], $params = []) {
-
-			if(!$params) {
-				$params = ['limit' => 100];
-			}
-
-			if(!$fields) {
-				$fields = [
-					'id',
-					'name',
-					'postsCount'
-				];
-			}
-
-			return $this->getCollection('spaces', $fields, $params);
->>>>>>> a8e89ce4418ed0422beda5534cc24a2da48a2c39
 		}
 
 		public function createPost($space_id, $title, $content, $params = [], $fields = []) {
-
-<<<<<<< HEAD
-			/*  Params lo que quieres saber */
-			/*  Fields parametros de un solo nivel*/
-			/*  Variables parametros de varios niveles */
-=======
->>>>>>> a8e89ce4418ed0422beda5534cc24a2da48a2c39
-			/*
-			mutation($input: CreatePostInput!) {
-				createPost(
-					input: $input
-					spaceId: "0fihjgNW2UaH"
-				) {
-					id
-				}
-			}
-
-			mutation CreatePostMutation($input: CreatePostInput!) {
-				createPost(
-					spaceId: "0fihjgNW2UaH"
-					input: $input
-				) {
-					id
-				}
-			}
-			*/
-<<<<<<< HEAD
 
 			$fields = array_merge(['spaceId' => $space_id], $fields);
 
@@ -280,6 +226,24 @@
 			];
 
 			return $this->createInstance('createPost', $fields, $variables, $params);
+		}
+
+		public function createReply($post_id, $title, $content, $params = [], $fields = []) {
+
+			$fields = array_merge(['postId' => $post_id], $fields);
+
+			$variables = [
+				'input' => [
+					'postTypeId' => 'udE3pz9DBGv7nsr',
+					'publish' => true,
+					'mappingFields' => [
+						$this->mappingField('title', 'text', $title),
+						$this->mappingField('content', 'html', $content)
+					]
+				]
+			];
+
+			return $this->createInstance('createReply', $fields, $variables, $params);
 		}
 		public function createSpace($params = [], $variables = [], $fields = []) {
 			/*  Params lo que quieres saber */
@@ -289,23 +253,6 @@
 				'input' => $variables
 			];
 			return $this->createInstance('createSpace', $fields, $variables, $params);
-=======
-
-			$fields = array_merge(['spaceId' => $space_id], $fields);
-
-			$variables = [
-				'input' => [
-					'postTypeId' => 'udE3pz9DBGv7nsr',
-					'publish' => true,
-					'mappingFields' => [
-						$this->mappingField('title', 'text', $title),
-						$this->mappingField('content', 'html', $content)
-					]
-				]
-			];
-
-			return $this->createInstance('createPost', $fields, $variables, $params);
->>>>>>> a8e89ce4418ed0422beda5534cc24a2da48a2c39
 		}
 	}
 ?>
