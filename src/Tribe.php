@@ -7,30 +7,89 @@
 	use GraphQL\Mutation;
 	use GraphQL\Variable;
 
+
 	class Tribe {
 
 		private $api_key;
 		private $community_id;
+
 
 		public function __construct($api_key) {
 			$this->api_key = $api_key;
 			$this->baseUrl = 'https://app.tribe.so/graphql';
 		}
 
-		public function getAppToken($networkId){
+		public function getAppToken($networkId, $url, $memberId){
 			$arguments = [
 				"context" => "NETWORK",
 				"networkId" => $networkId, 
-				"entityId" => $networkId
+				"entityId" => $networkId,
+				"impersonateMemberId" => $memberId
 			];
 			$params = ["accessToken"];
 			$instance = new Graph('limitedToken', $arguments);
 			$query = $this->generateNodeFields($instance, $params);
-			$query = $instance->root()->query();			
-			$response = $this->request($query);
-			return $response;
+			$query = $instance->root()->query();	
+			$query = str_replace('"NETWORK"',"NETWORK", $query);
+			$this->baseUrl = $url;
+			$curl = curl_init();
+			$graph_params = [
+				'query' => $query
+			];
+			curl_setopt_array($curl, [
+				CURLOPT_URL => $this->baseUrl,
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_ENCODING => '',
+				CURLOPT_MAXREDIRS => 10,
+				CURLOPT_TIMEOUT => 0,
+				CURLOPT_FOLLOWLOCATION => true,
+				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+				CURLOPT_CUSTOMREQUEST => 'POST',
+				CURLOPT_POSTFIELDS => json_encode($graph_params),
+				CURLOPT_HTTPHEADER => [
+					'Content-Type: application/json'
+				],
+			]);
+			$response = curl_exec($curl);
+			curl_close($curl);
+			return json_decode($response);
 		}
 
+		public function joinSpace($user_access_token, $space_id){
+			$arguments = [
+				"spaceId" => $space_id
+			];
+
+			$params = [
+				"status"
+			];
+
+			$mutation = new Mutation('joinSpace');
+
+			$query = $mutation->joinSpace($arguments)->use('status')->root()->query();
+			$curl = curl_init();
+			$graph_params = [
+				'query' => $query
+			];
+			curl_setopt_array($curl, [
+				CURLOPT_URL => $this->baseUrl,
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_ENCODING => '',
+				CURLOPT_MAXREDIRS => 10,
+				CURLOPT_TIMEOUT => 0,
+				CURLOPT_FOLLOWLOCATION => true,
+				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+				CURLOPT_CUSTOMREQUEST => 'POST',
+				CURLOPT_POSTFIELDS => json_encode($graph_params),
+				CURLOPT_HTTPHEADER => [
+					'Authorization: Bearer ' . $user_access_token,
+					'Content-Type: application/json'
+				],
+			]);
+			$response = curl_exec($curl);
+			curl_close($curl);
+			return json_decode($response);
+		}
 		public function getMembers(){
 			$arguments = [
 				"limit" => 100000
@@ -53,7 +112,6 @@
 		private function request($query, $variables = []) {
 
 			$curl = curl_init();
-
 			$graph_params = [
 				'query' => $query,
 				'variables' => $variables
@@ -74,11 +132,7 @@
 					'Content-Type: application/json'
 				],
 			]);
-			/* print($query);
-			print($variables); */
-
 			$response = curl_exec($curl);
-
 			curl_close($curl);
 
 			return json_decode($response);
