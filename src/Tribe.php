@@ -196,6 +196,23 @@
 
 			return $response;
 		}
+		private function createInstanceName($name, $fields = [], $variables = [], $params = [], $instance) {
+
+			$mutation = new Mutation($name, array_merge($fields, [ 'input'=> new Variable('input', $instance . 'Input!', '') ]));
+
+			$query = $this->generateNodeFields($mutation, $params);
+
+			$query = $query->root()->query();
+
+			$response = $this->request($query, $variables);
+
+			if(isset($response->data->$name)) {
+
+				return $response->data->$name;
+			}
+
+			return $response;
+		}
 
 		private function mappingField($name, $type, $value) {
 
@@ -282,7 +299,7 @@
 			return $this->createInstance('createPost', $fields, $variables, $params);
 		}
 
-		public function createReply($post_id, $title, $content, $params = [], $fields = []) {
+		public function createReply($post_id, $content, $params = [], $fields = []) {
 
 			$fields = array_merge(['postId' => $post_id], $fields);
 
@@ -297,7 +314,7 @@
 				]
 			];
 
-			return $this->createInstance('createReply', $fields, $variables, $params);
+			return $this->createInstanceName('createReply', $fields, $variables, $params, "CreatePost");
 		}
 		public function createSpace($params = [], $variables = [], $fields = []) {
 			/*  Params lo que quieres saber */
