@@ -19,25 +19,25 @@
 			$this->baseUrl = 'https://app.tribe.so/graphql';
 		}
 
-		public function getAppToken($networkId, $url, $memberId){
+		public function getAppToken($networkId, $url, $memberId = ''){
 			$arguments = [
 				"context" => "NETWORK",
 				"networkId" => $networkId, 
-				"entityId" => $networkId,
-				"impersonateMemberId" => $memberId
+				"entityId" => $networkId
 			];
+
+			if($memberId) $arguments["impersonateMemberId"] = $memberId;
+
 			$params = ["accessToken"];
 			$instance = new Graph('limitedToken', $arguments);
-			$query = $this->generateNodeFields($instance, $params);
-			$query = $instance->root()->query();	
+			$query = $instance->root()->use('accessToken')->query();	
 			$query = str_replace('"NETWORK"',"NETWORK", $query);
-			$this->baseUrl = $url;
 			$curl = curl_init();
 			$graph_params = [
 				'query' => $query
 			];
 			curl_setopt_array($curl, [
-				CURLOPT_URL => $this->baseUrl,
+				CURLOPT_URL => $url,
 				CURLOPT_RETURNTRANSFER => true,
 				CURLOPT_ENCODING => '',
 				CURLOPT_MAXREDIRS => 10,
