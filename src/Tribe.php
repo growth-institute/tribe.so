@@ -299,6 +299,15 @@
 			return $this->createInstance('createPost', $fields, $variables, $params);
 		}
 
+		public function updateSpace($params, $variables, $input) {
+
+			$input = [
+				'input' => $input
+			];
+
+			return $this->createInstance('updateSpace', $variables, $input, $params);
+		}
+
 		public function createReply($post_id, $content, $params = [], $fields = []) {
 
 			$fields = array_merge(['postId' => $post_id], $fields);
