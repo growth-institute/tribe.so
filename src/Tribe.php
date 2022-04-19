@@ -225,44 +225,13 @@
 			];
 		}
 
-		public function getPosts($space_ids, $fields = [], $params = []) {
+		public function getPosts($arguments, $params) {
 
-			if(!$params) {
-				$params = ['limit' => 100];
-			}
-
-			if(!$fields) {
-				$fields = [
-					'id',
-					'title',
-					'postTypeId',
-					'postType' => [
-						'id'
-					]
-				];
-			}
-
-			//Check if space id is string or array
-			if(is_string($space_ids)) $space_ids = [$space_ids];
-
-			return $this->getCollection('posts', $fields, $params, ['spaceIds' => $space_ids]);
-		}
-
-		public function getSpaces($fields = [], $params = []) {
-
-			if(!$params) {
-				$params = ['limit' => 100];
-			}
-
-			if(!$fields) {
-				$fields = [
-					'id',
-					'name',
-					'postsCount'
-				];
-			}
-
-			return $this->getCollection('spaces', $fields, $params);
+			$instance = new Graph('posts', $arguments);
+			$query = $this->generateNodeFields($instance, $params);
+			$query = $instance->root()->query();			
+			$response = $this->request($query);
+			return $response->data->posts;
 		}
 
 		public function getSpace($arguments, $params){
@@ -299,6 +268,20 @@
 			return $this->createInstance('createPost', $fields, $variables, $params);
 		}
 
+		public function getSpaces($arguments, $params){
+			$instance = new Graph('spaces', $arguments);
+			$query = $this->generateNodeFields($instance, $params);
+			$query = $instance->root()->query();			
+			$response = $this->request($query);
+			return $response->data;
+		}
+		public function getCollections($params){
+			$instance = new Graph('collections');
+			$query = $this->generateNodeFields($instance, $params);
+			$query = $instance->root()->query();			
+			$response = $this->request($query);
+			return $response;
+		}
 		public function updateSpace($params, $variables, $input) {
 
 			$input = [
@@ -333,6 +316,19 @@
 				'input' => $variables
 			];
 			return $this->createInstance('createSpace', $fields, $variables, $params);
+		}
+
+		public function deleteSpace($params = [], $variables = [], $fields = []){
+
+			$params = [
+				"status"
+			];
+
+			$mutation = new Mutation('deleteSpace');
+
+			$query = $mutation->deleteSpace($variables)->use('status')->root()->query();
+			$response = $this->request($query);
+			return $response;
 		}
 	}
 ?>
