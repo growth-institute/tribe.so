@@ -247,9 +247,24 @@
 			$query = $this->generateNodeFields($instance, $params);
 			$query = $instance->root()->query();			
 			$response = $this->request($query);
-			return $response;
+			return $response->data;
 		}
 
+		public function updatePost($post_id, $content, $params){
+			$fields = ['id' => $post_id];
+
+			$variables = [
+				'input' => [
+					'publish' => true,
+					'mappingFields' => [
+						$this->mappingField('title', 'text', ""),
+						$this->mappingField('content', 'html', $content),
+					]
+				]
+			];
+
+			return $this->createInstance('updatePost', $fields, $variables, $params);			
+		}
 		public function createPost($space_id, $title, $content, $params = [], $fields = []) {
 
 			$fields = array_merge(['spaceId' => $space_id], $fields);
@@ -257,7 +272,7 @@
 			$variables = [
 				'input' => [
 					'postTypeId' => 'udE3pz9DBGv7nsr',
-					'publish' => true,
+					'publish' => false,
 					'mappingFields' => [
 						$this->mappingField('title', 'text', $title),
 						$this->mappingField('content', 'html', $content)
