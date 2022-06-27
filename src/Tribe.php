@@ -1,312 +1,520 @@
 <?php
 
-	namespace TribePHP;
+namespace TribePHP;
 
-	use Curl\Curl;
-	use GraphQL\Graph;
-	use GraphQL\Mutation;
-	use GraphQL\Variable;
-
-
-	class Tribe {
-
-		private $api_key;
-		private $community_id;
+use Curl\Curl;
+use GraphQL\Graph;
+use GraphQL\Mutation;
+use GraphQL\Variable;
 
 
-		public function __construct($api_key) {
-			$this->api_key = $api_key;
-			$this->baseUrl = 'https://app.tribe.so/graphql';
-		}
+class Tribe {
 
-		public function getAppToken($networkId, $url, $memberId){
-			$arguments = [
-				"context" => "NETWORK",
-				"networkId" => $networkId, 
-				"entityId" => $networkId,
-				"impersonateMemberId" => $memberId
-			];
-			$params = ["accessToken"];
-			$instance = new Graph('limitedToken', $arguments);
-			$query = $this->generateNodeFields($instance, $params);
-			$query = $instance->root()->query();	
-			$query = str_replace('"NETWORK"',"NETWORK", $query);
-			$this->baseUrl = $url;
-			$curl = curl_init();
-			$graph_params = [
-				'query' => $query
-			];
-			curl_setopt_array($curl, [
-				CURLOPT_URL => $this->baseUrl,
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_ENCODING => '',
-				CURLOPT_MAXREDIRS => 10,
-				CURLOPT_TIMEOUT => 0,
-				CURLOPT_FOLLOWLOCATION => true,
-				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-				CURLOPT_CUSTOMREQUEST => 'POST',
-				CURLOPT_POSTFIELDS => json_encode($graph_params),
-				CURLOPT_HTTPHEADER => [
-					'Content-Type: application/json'
-				],
-			]);
-			$response = curl_exec($curl);
-			curl_close($curl);
-			return json_decode($response);
-		}
+    /**
+     * @var
+     */
+    private $api_key;
+    /**
+     * @var
+     */
+    private $community_id;
 
-		public function joinSpace($user_access_token, $space_id){
-			$arguments = [
-				"spaceId" => $space_id
-			];
 
-			$params = [
-				"status"
-			];
+    /**
+     * @param $api_key
+     */
+    public function __construct($api_key) {
+        $this->api_key = $api_key;
+        $this->baseUrl = 'https://app.tribe.so/graphql';
+    }
 
-			$mutation = new Mutation('joinSpace');
+    /**
+     * @param $networkId
+     * @param $url
+     * @param $memberId
+     * @return mixed
+     */
+    public function getAppToken($networkId, $url, $memberId = ''){
+        $arguments = [
+            "context" => "NETWORK",
+            "networkId" => $networkId,
+            "entityId" => $networkId
+        ];
 
-			$query = $mutation->joinSpace($arguments)->use('status')->root()->query();
-			$curl = curl_init();
-			$graph_params = [
-				'query' => $query
-			];
-			curl_setopt_array($curl, [
-				CURLOPT_URL => $this->baseUrl,
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_ENCODING => '',
-				CURLOPT_MAXREDIRS => 10,
-				CURLOPT_TIMEOUT => 0,
-				CURLOPT_FOLLOWLOCATION => true,
-				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-				CURLOPT_CUSTOMREQUEST => 'POST',
-				CURLOPT_POSTFIELDS => json_encode($graph_params),
-				CURLOPT_HTTPHEADER => [
-					'Authorization: Bearer ' . $user_access_token,
-					'Content-Type: application/json'
-				],
-			]);
-			$response = curl_exec($curl);
-			curl_close($curl);
-			return json_decode($response);
-		}
-		public function getMembers(){
-			$arguments = [
-				"limit" => 100000
-			];
-			$params = [
-				"totalCount",
-				"nodes" => [
-					"id",
-					"name",
-					"email",
-					"username"
-				]
-			];
-			$instance = new Graph('members', $arguments);
-			$query = $this->generateNodeFields($instance, $params);
-			$query = $instance->root()->query();			
-			$response = $this->request($query);
-			return $response->data;
-		}
-		private function request($query, $variables = []) {
+        if($memberId) $arguments["impersonateMemberId"] = $memberId;
 
-			$curl = curl_init();
-			$graph_params = [
-				'query' => $query,
-				'variables' => $variables
-			];
+        $params = ["accessToken"];
+        $instance = new Graph('limitedToken', $arguments);
+        $query = $instance->root()->use('accessToken')->query();
+        $query = str_replace('"NETWORK"',"NETWORK", $query);
+        $curl = curl_init();
+        $graph_params = [
+            'query' => $query
+        ];
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => json_encode($graph_params),
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json'
+            ],
+        ]);
+        $response = curl_exec($curl);
+        curl_close($curl);
+        return json_decode($response);
+    }
 
-			curl_setopt_array($curl, [
-				CURLOPT_URL => $this->baseUrl,
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_ENCODING => '',
-				CURLOPT_MAXREDIRS => 10,
-				CURLOPT_TIMEOUT => 0,
-				CURLOPT_FOLLOWLOCATION => true,
-				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-				CURLOPT_CUSTOMREQUEST => 'POST',
-				CURLOPT_POSTFIELDS => json_encode($graph_params),
-				CURLOPT_HTTPHEADER => [
-					'Authorization: Bearer ' . $this->api_key,
-					'Content-Type: application/json'
-				],
-			]);
-			$response = curl_exec($curl);
-			curl_close($curl);
+    /**
+     * @param $user_access_token
+     * @param $space_id
+     * @return mixed
+     */
+    public function joinSpace($user_access_token, $space_id){
+        $arguments = [
+            "spaceId" => $space_id
+        ];
 
-			return json_decode($response);
-		}
+        $params = [
+            "status"
+        ];
 
-		private function generateNodeFields($nodes, $fields) {
+        $mutation = new Mutation('joinSpace');
 
-			foreach($fields as $k => $field) {
-				if(is_int($k)) {
-					$nodes = $nodes->use($field);
-				} else {
+        $query = $mutation->joinSpace($arguments)->use('status')->root()->query();
+        $curl = curl_init();
+        $graph_params = [
+            'query' => $query
+        ];
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $this->baseUrl,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => json_encode($graph_params),
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $user_access_token,
+                'Content-Type: application/json'
+            ],
+        ]);
+        $response = curl_exec($curl);
+        curl_close($curl);
+        return json_decode($response);
+    }
 
-					$nodes = $nodes->$k;
-					if(is_array($field)) {
+    /**
+     * @return mixed
+     */
+    public function getMembers(){
+        $arguments = [
+            "limit" => 1000
+        ];
+        $params = [
+            "totalCount",
+            "nodes" => [
+                "id",
+                "name",
+                "email",
+                "username",
+                "profilePictureId"
+            ]
+        ];
+        $instance = new Graph('members', $arguments);
+        $query = $this->generateNodeFields($instance, $params);
+        $query = $instance->root()->query();
+        $response = $this->request($query);
+        return $response->data;
+    }
 
-						$nodes = $this->generateNodeFields($nodes, $field);
-					}
-				}
-			}
+    /**
+     * @param $query
+     * @param $variables
+     * @return mixed
+     */
+    private function request($query, $variables = []) {
 
-			return $nodes;
-		}
+        $curl = curl_init();
+        $graph_params = [
+            'query' => $query,
+            'variables' => $variables
+        ];
 
-		private function getCollection($name, $fields = [], $params = [], $defaults = []) {
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $this->baseUrl,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => json_encode($graph_params),
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $this->api_key,
+                'Content-Type: application/json'
+            ],
+        ]);
+        $response = curl_exec($curl);
+        curl_close($curl);
 
-			$instance = new Graph($name, array_merge($params, $defaults));
+        return json_decode($response);
+    }
 
-			$instance->nodes
-				->prev()
-				->use('totalCount');
+    /**
+     * @param $nodes
+     * @param $fields
+     * @return mixed
+     */
+    private function generateNodeFields($nodes, $fields) {
 
-			$nodes = $instance->nodes;
+        foreach($fields as $k => $field) {
+            if(is_int($k)) {
+                $nodes = $nodes->use($field);
+            } else {
 
-			$nodes = $this->generateNodeFields($nodes, $fields);
+                $nodes = $nodes->$k;
+                if(is_array($field)) {
 
-			$query = $instance->root()->query();
-			$response = $this->request($query);
+                    $nodes = $this->generateNodeFields($nodes, $field);
+                }
+            }
+        }
 
-			if(isset($response->data->$name->nodes)) {
+        return $nodes;
+    }
 
-				return $response->data->$name->nodes;
-			}
+    /**
+     * @param $name
+     * @param $fields
+     * @param $params
+     * @param $defaults
+     * @return mixed
+     */
+    private function getCollection($name, $fields = [], $params = [], $defaults = []) {
 
-			return $response;
-		}
+        $instance = new Graph($name, array_merge($params, $defaults));
 
-		private function createInstance($name, $fields = [], $variables = [], $params = []) {
+        $instance->nodes
+            ->prev()
+            ->use('totalCount');
 
-			$mutation = new Mutation($name, array_merge($fields, [ 'input'=> new Variable('input', ucwords($name) . 'Input!', '') ]));
+        $nodes = $instance->nodes;
 
-			$query = $this->generateNodeFields($mutation, $params);
+        $nodes = $this->generateNodeFields($nodes, $fields);
 
-			$query = $query->root()->query();
+        $query = $instance->root()->query();
+        $response = $this->request($query);
 
-			$response = $this->request($query, $variables);
+        if(isset($response->data->$name->nodes)) {
 
-			if(isset($response->data->$name)) {
+            return $response->data->$name->nodes;
+        }
 
-				return $response->data->$name;
-			}
+        return $response;
+    }
 
-			return $response;
-		}
+    /**
+     * @param $name
+     * @param $fields
+     * @param $variables
+     * @param $params
+     * @return mixed
+     */
+    private function createInstance($name, $fields = [], $variables = [], $params = []) {
 
-		private function mappingField($name, $type, $value) {
+        $mutation = new Mutation($name, array_merge($fields, [ 'input'=> new Variable('input', ucwords($name) . 'Input!', '') ]));
 
-			if(in_array($type, ['text', 'html'])) $value = "\"{$value}\"";
+        $query = $this->generateNodeFields($mutation, $params);
 
-			return [
-				'key' => $name,
-				'type' => $type,
-				'value' => $value
-			];
-		}
+        $query = $query->root()->query();
 
-		public function getPosts($space_ids, $fields = [], $params = []) {
+        $response = $this->request($query, $variables);
 
-			if(!$params) {
-				$params = ['limit' => 100];
-			}
+        if(isset($response->data->$name)) {
 
-			if(!$fields) {
-				$fields = [
-					'id',
-					'title',
-					'postTypeId',
-					'postType' => [
-						'id'
-					]
-				];
-			}
+            return $response->data->$name;
+        }
 
-			//Check if space id is string or array
-			if(is_string($space_ids)) $space_ids = [$space_ids];
+        return $response;
+    }
 
-			return $this->getCollection('posts', $fields, $params, ['spaceIds' => $space_ids]);
-		}
+    /**
+     * @param $name
+     * @param $fields
+     * @param $variables
+     * @param $params
+     * @param $instance
+     * @return mixed
+     */
+    private function createInstanceName($name, $fields = [], $variables = [], $params = [], $instance) {
 
-		public function getSpaces($fields = [], $params = []) {
+        $mutation = new Mutation($name, array_merge($fields, [ 'input'=> new Variable('input', $instance . 'Input!', '') ]));
 
-			if(!$params) {
-				$params = ['limit' => 100];
-			}
+        $query = $this->generateNodeFields($mutation, $params);
 
-			if(!$fields) {
-				$fields = [
-					'id',
-					'name',
-					'postsCount'
-				];
-			}
+        $query = $query->root()->query();
 
-			return $this->getCollection('spaces', $fields, $params);
-		}
+        $response = $this->request($query, $variables);
 
-		public function getSpace($arguments, $params){
-			$instance = new Graph('space', $arguments);
-			$query = $this->generateNodeFields($instance, $params);
-			$query = $instance->root()->query();			
-			$response = $this->request($query);
-			return $response;
-		}
+        if(isset($response->data->$name)) {
 
-		public function getPost($arguments, $params){
-			$instance = new Graph('post', $arguments);
-			$query = $this->generateNodeFields($instance, $params);
-			$query = $instance->root()->query();			
-			$response = $this->request($query);
-			return $response;
-		}
+            return $response->data->$name;
+        }
 
-		public function createPost($space_id, $title, $content, $params = [], $fields = []) {
+        return $response;
+    }
 
-			$fields = array_merge(['spaceId' => $space_id], $fields);
+    /**
+     * @param $name
+     * @param $type
+     * @param $value
+     * @return array
+     */
+    private function mappingField($name, $type, $value) {
 
-			$variables = [
-				'input' => [
-					'postTypeId' => 'udE3pz9DBGv7nsr',
-					'publish' => true,
-					'mappingFields' => [
-						$this->mappingField('title', 'text', $title),
-						$this->mappingField('content', 'html', $content)
-					]
-				]
-			];
+        if(in_array($type, ['text', 'html'])) $value = "\"{$value}\"";
 
-			return $this->createInstance('createPost', $fields, $variables, $params);
-		}
+        return [
+            'key' => $name,
+            'type' => $type,
+            'value' => $value
+        ];
+    }
 
-		public function createReply($post_id, $title, $content, $params = [], $fields = []) {
+    /**
+     * @param $arguments
+     * @param $params
+     * @return mixed
+     */
+    public function getPosts($arguments, $params) {
 
-			$fields = array_merge(['postId' => $post_id], $fields);
+        $instance = new Graph('posts', $arguments);
+        $query = $this->generateNodeFields($instance, $params);
+        $query = $instance->root()->query();
+        $response = $this->request($query);
+        return $response->data->posts;
+    }
 
-			$variables = [
-				'input' => [
-					'postTypeId' => 'udE3pz9DBGv7nsr',
-					'publish' => true,
-					'mappingFields' => [
-						$this->mappingField('title', 'text', $title),
-						$this->mappingField('content', 'html', $content)
-					]
-				]
-			];
+    /**
+     * @param $arguments
+     * @param $params
+     * @return mixed
+     */
+    public function getSpace($arguments, $params){
+        $instance = new Graph('space', $arguments);
+        $query = $this->generateNodeFields($instance, $params);
+        $query = $instance->root()->query();
+        $response = $this->request($query);
+        return $response;
+    }
 
-			return $this->createInstance('createReply', $fields, $variables, $params);
-		}
-		public function createSpace($params = [], $variables = [], $fields = []) {
-			/*  Params lo que quieres saber */
-			/*  Fields parametros de un solo nivel*/
-			/*  Variables parametros de varios niveles */
-			$variables = [
-				'input' => $variables
-			];
-			return $this->createInstance('createSpace', $fields, $variables, $params);
-		}
-	}
+    /**
+     * @param $arguments
+     * @param $params
+     * @return mixed
+     */
+    public function getPost($arguments, $params){
+        $instance = new Graph('post', $arguments);
+        $query = $this->generateNodeFields($instance, $params);
+        $query = $instance->root()->query();
+        $response = $this->request($query);
+        return $response->data;
+    }
+
+    /**
+     * @param $post_id
+     * @param $content
+     * @param $params
+     * @return mixed
+     */
+    public function updatePost($post_id, $content, $params){
+        $fields = ['id' => $post_id];
+
+        $variables = [
+            'input' => [
+                'publish' => true,
+                'mappingFields' => [
+                    $this->mappingField('title', 'text', ""),
+                    $this->mappingField('content', 'html', $content),
+                ]
+            ]
+        ];
+
+        return $this->createInstance('updatePost', $fields, $variables, $params);
+    }
+
+    /**
+     * @param $space_id
+     * @param $title
+     * @param $content
+     * @param $params
+     * @param $fields
+     * @return mixed
+     */
+    public function createPost($space_id, $title, $content, $params = [], $fields = []) {
+
+        $fields = array_merge(['spaceId' => $space_id], $fields);
+
+        $variables = [
+            'input' => [
+                'postTypeId' => 'udE3pz9DBGv7nsr',
+                'publish' => false,
+                'mappingFields' => [
+                    $this->mappingField('title', 'text', $title),
+                    $this->mappingField('content', 'html', $content)
+                ]
+            ]
+        ];
+
+        return $this->createInstance('createPost', $fields, $variables, $params);
+    }
+
+    /**
+     * @param $arguments
+     * @param $params
+     * @return mixed
+     */
+    public function getSpaces($arguments, $params){
+        $instance = new Graph('spaces', $arguments);
+        $query = $this->generateNodeFields($instance, $params);
+        $query = $instance->root()->query();
+        $response = $this->request($query);
+        return $response->data;
+    }
+
+    /**
+     * @param $params
+     * @return mixed
+     */
+    public function getCollections($params){
+        $instance = new Graph('collections');
+        $query = $this->generateNodeFields($instance, $params);
+        $query = $instance->root()->query();
+        $response = $this->request($query);
+        return $response;
+    }
+
+    /**
+     * @param $params
+     * @param $variables
+     * @param $input
+     * @return mixed
+     */
+    public function updateSpace($params, $variables, $input) {
+
+        $input = [
+            'input' => $input
+        ];
+
+        return $this->createInstance('updateSpace', $variables, $input, $params);
+    }
+
+    /**
+     * @param $post_id
+     * @param $content
+     * @param $params
+     * @param $fields
+     * @return mixed
+     */
+    public function createReply($post_id, $content, $params = [], $fields = []) {
+
+        $fields = array_merge(['postId' => $post_id], $fields);
+
+        $variables = [
+            'input' => [
+                'postTypeId' => 'udE3pz9DBGv7nsr',
+                'publish' => true,
+                'mappingFields' => [
+                    $this->mappingField('title', 'text', ''),
+                    $this->mappingField('content', 'html', $content)
+                ]
+            ]
+        ];
+
+        return $this->createInstanceName('createReply', $fields, $variables, $params, "CreatePost");
+    }
+
+    /**
+     * @param $params
+     * @param $variables
+     * @param $fields
+     * @return mixed
+     */
+    public function createSpace($params = [], $variables = [], $fields = []) {
+        /*  Params lo que quieres saber */
+        /*  Fields parametros de un solo nivel*/
+        /*  Variables parametros de varios niveles */
+        $variables = [
+            'input' => $variables
+        ];
+        return $this->createInstance('createSpace', $fields, $variables, $params);
+    }
+
+    /**
+     * @param $params
+     * @param $variables
+     * @param $fields
+     * @return mixed
+     */
+    public function deleteSpace($params = [], $variables = [], $fields = []){
+
+        $params = [
+            "status"
+        ];
+
+        $mutation = new Mutation('deleteSpace');
+
+        $query = $mutation->deleteSpace($variables)->use('status')->root()->query();
+        $response = $this->request($query);
+        return $response;
+    }
+
+    /**
+     * @param $variables
+     * @param $params
+     * @param $fields
+     * @return string
+     */
+    public function createImages($variables = [], $params = [], $fields = []) {
+
+        $variables = [
+            'input' => $variables
+        ];
+        $mutation = new Mutation('createImages', [ 'input'=> new Variable('input', '[CreateImageInput!]!', '') ]);
+
+        $query = $this->generateNodeFields($mutation, $params);
+
+        $query = $query->root()->query();
+
+        $response = $this->request($query, $variables);
+        $image_api_object =  $response->data->createImages[0];
+        // Validate response
+        if(!isset($image_api_object)) return "Error, image signedUrl creation failed";
+
+        return $image_api_object;
+
+    }
+
+    /**
+     * @param $variables
+     * @param $params
+     * @param $fields
+     * @return mixed
+     */
+    public function updateMember($variables = [], $params = [], $fields = []){
+        $variables = [
+            'input' => $variables
+        ];
+        return $this->createInstance('updateMember', $fields, $variables, $params);
+    }
+}
 ?>
