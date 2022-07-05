@@ -92,7 +92,7 @@
 		}
 		public function getMembers($query = ''){
             $arguments = [
-                "limit" => 1000,
+                "limit" => 10000,
                 "query" => $query
             ];
             $params = [
