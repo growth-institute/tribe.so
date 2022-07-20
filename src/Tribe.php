@@ -144,18 +144,22 @@
 
 			foreach($fields as $k => $field) {
 				if(is_int($k)) {
+                    if(is_int($field)){
+                        for($i= 1; $i <= $field; $i++){
+                            $nodes = $nodes->prev();
+                        }
+                        continue;
+                    }
 					$nodes = $nodes->use($field);
 				} else {
-
 					$nodes = $nodes->$k;
 					if(is_array($field)) {
-
 						$nodes = $this->generateNodeFields($nodes, $field);
 					}
 				}
 			}
 
-			return $nodes;
+            return $nodes;
 		}
 
 		private function getCollection($name, $fields = [], $params = [], $defaults = []) {
@@ -373,6 +377,42 @@
                 'input' => $variables
             ];
             return $this->createInstance('updateMember', $fields, $variables, $params);
+        }
+
+        public function getNotifications($arguments, $params) {
+
+            $instance = new Graph('getNotifications', $arguments);
+            $query = $this->generateNodeFields($instance, $params);
+            $query = $instance->root()->query();
+            $response = $this->request($query);
+            if(isset($response->data->getNotifications->nodes)){
+                $response = $response->data->getNotifications->nodes;
+            }else{
+                $response = $response->data;
+            }
+            return $response;
+        }
+
+        public function getNotificationsCount($params) {
+
+            $instance = new Graph('getNotificationsCount');
+            $query = $this->generateNodeFields($instance, $params);
+            $query = $instance->root()->query();
+            $response = $this->request($query);
+            return $response;
+        }
+
+        public function readNotification($arguments){
+			$mutation = new Mutation('readNotification');
+            $mutation->readNotification($arguments)->use('status')->root()->query();
+			$query = $mutation;
+			$query = $query->root()->query();
+
+            print($query);
+			$response = $this->request($query);
+            print(json_encode($response));
+
+            return $response;
         }
 	}
 ?>
