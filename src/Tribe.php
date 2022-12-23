@@ -162,6 +162,27 @@
             return $nodes;
 		}
 
+		private function generateNestedNodeFields(){
+			foreach($fields as $k => $field) {
+				if(is_int($k)) {
+                    if(is_int($field)){
+                        for($i= 1; $i <= $field; $i++){
+                            $nodes = $nodes->prev();
+                        }
+                        continue;
+                    }
+					$nodes = $nodes->use($field);
+				} else {
+					$nodes = $nodes->$k;
+					if(is_array($field)) {
+						$nodes = $this->generateNestedNodeFields($nodes, $field);
+					}
+				}
+			}
+
+            return $nodes;
+		}
+
 		private function getCollection($name, $fields = [], $params = [], $defaults = []) {
 
 			$instance = new Graph($name, array_merge($params, $defaults));
@@ -414,5 +435,13 @@
 
             return $response;
         }
+		
+		public function getReplies($arguments, $params){
+			$instance = new Graph('replies', $arguments);
+			$query = $this->generateNodeFields($instance, $params);
+			$query = $instance->root()->query();			
+			$response = $this->request($query);
+			return $response->data;
+		}
 	}
 ?>
