@@ -1,447 +1,666 @@
 <?php
 
-	namespace TribePHP;
+	use TribePHP\Tribe;
+	use CHAPI\MessageQ;
+	use Firebase\JWT\JWT;
 
-	use Curl\Curl;
-	use GraphQL\Graph;
-	use GraphQL\Mutation;
-	use GraphQL\Variable;
-
-
-	class Tribe {
-
-		private $api_key;
-		private $community_id;
-
-
-		public function __construct($api_key) {
-			$this->api_key = $api_key;
-			$this->baseUrl = 'https://app.tribe.so/graphql';
+	class TribeEndpoint extends CHAPI\Endpoint {
+		function init() {
+			$this->listJWT = false;
+			$this->addRoute('sso', [$this, 'sso'], 'post');
+			$this->addRoute('post/{id}', [$this, 'getPost'], 'get');
+			$this->addRoute('replies/{id}', [$this, 'getReplies'], 'get');
+			$this->addRoute('post', [$this, 'createPost'], 'post');
+			$this->addRoute('reply', [$this, 'createReply'], 'post');
+			$this->addRoute('space', [$this, 'createSpace'], 'post');
+			$this->addRoute('join', [$this, 'joinSpace'], 'post');
+			$this->addRoute('space/{id}', [$this, 'getSpace'], 'get');
+			$this->addRoute('auth', [$this, 'getTribeAccessToken'], 'post');
+			$this->addRoute('member/{email}', [$this, 'getMember'], 'get');
+			$this->addRoute('update/space', [$this, 'updateSpace'], 'post');
+			$this->addRoute('delete/spaces', [$this, 'deleteAllSpaces'], 'delete');
+			$this->addRoute('collections', [$this, 'getCollections'], 'get');
+			$this->addRoute('posts/{id}', [$this, 'getPosts'], 'get');
+			$this->addRoute('update/post', [$this, 'updatePost'], 'post');
+			$this->addRoute('image', [$this, 'triggerImageUpload'], 'post');
+			$this->addRoute('update/image', [$this, 'uploadImage'], 'post');
 		}
 
-		public function getAppToken($networkId, $url, $memberId = ''){
-			$arguments = [
-				"context" => "NETWORK",
-				"networkId" => $networkId, 
-				"entityId" => $networkId
-			];
+		/**
+		 * @throws Exception
+		 */
 
-			if($memberId) $arguments["impersonateMemberId"] = $memberId;
-
-			$params = ["accessToken"];
-			$instance = new Graph('limitedToken', $arguments);
-			$query = $instance->root()->use('accessToken')->query();	
-			$query = str_replace('"NETWORK"',"NETWORK", $query);
-			$curl = curl_init();
-			$graph_params = [
-				'query' => $query
-			];
-			curl_setopt_array($curl, [
-				CURLOPT_URL => $url,
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_ENCODING => '',
-				CURLOPT_MAXREDIRS => 10,
-				CURLOPT_TIMEOUT => 0,
-				CURLOPT_FOLLOWLOCATION => true,
-				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-				CURLOPT_CUSTOMREQUEST => 'POST',
-				CURLOPT_POSTFIELDS => json_encode($graph_params),
-				CURLOPT_HTTPHEADER => [
-					'Content-Type: application/json'
-				],
-			]);
-			$response = curl_exec($curl);
-			curl_close($curl);
-			return json_decode($response);
+		static function triggerImageUpload() {
+			$message = MessageQ::newInstance();
+			$message->sendMessage(json_encode(["class" => "TribeEndpoint", "function" => "uploadImage", "params" => []]));
+			$message->close();
 		}
 
-		public function joinSpace($user_access_token, $space_id){
-			$arguments = [
-				"spaceId" => $space_id
-			];
+		function uploadImage() {
+			global $app;
+			$email = '';
+			$tribe = new Tribe(GeneralOptions::getOption('tribe_app_token'));
 
+			if($this->request->post("email")) $email = $this->request->post("email");
+
+			$arguments = [
+				"contentType" => ""
+			];
 			$params = [
-				"status"
+				"fields",
+				"mediaDownloadUrl",
+				"mediaId",
+				"mediaUrl",
+				"signedUrl"
 			];
 
-			$mutation = new Mutation('joinSpace');
+			$res_members = $tribe->getMembers($email);
 
-			$query = $mutation->joinSpace($arguments)->use('status')->root()->query();
-			$curl = curl_init();
-			$graph_params = [
-				'query' => $query
-			];
-			curl_setopt_array($curl, [
-				CURLOPT_URL => $this->baseUrl,
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_ENCODING => '',
-				CURLOPT_MAXREDIRS => 10,
-				CURLOPT_TIMEOUT => 0,
-				CURLOPT_FOLLOWLOCATION => true,
-				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-				CURLOPT_CUSTOMREQUEST => 'POST',
-				CURLOPT_POSTFIELDS => json_encode($graph_params),
-				CURLOPT_HTTPHEADER => [
-					'Authorization: Bearer ' . $user_access_token,
-					'Content-Type: application/json'
-				],
-			]);
-			$response = curl_exec($curl);
-			curl_close($curl);
-			return json_decode($response);
-		}
-		public function getMembers($query = ''){
-            $arguments = [
-                "limit" => 10000,
-                "query" => $query
-            ];
-            $params = [
-                "totalCount",
-                "nodes" => [
-                    "id",
-                    "name",
-                    "email",
-                    "username",
-                    "profilePictureId"
-                ]
-            ];
-            $instance = new Graph('members', $arguments);
-            $query = $this->generateNodeFields($instance, $params);
-            $query = $instance->root()->query();
-            $response = $this->request($query);
-            return $response->data;
-		}
-		private function request($query, $variables = []) {
+			if(isset($res_members->data->errors)) {
+				$status = $this->handleErrors($res_members->data->errors);
+				$this->response->setStatus($status);
+				$this->data = $res_members->data;
+				log_to_file($res_members->data->errors, 'mq');
+				if($this->request->post("email")) $this->respond();
+				return json_encode($this->data);
+			}
 
-			$curl = curl_init();
-			$graph_params = [
-				'query' => $query,
-				'variables' => $variables
-			];
+			$members = $res_members;
 
-			curl_setopt_array($curl, [
-				CURLOPT_URL => $this->baseUrl,
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_ENCODING => '',
-				CURLOPT_MAXREDIRS => 10,
-				CURLOPT_TIMEOUT => 0,
-				CURLOPT_FOLLOWLOCATION => true,
-				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-				CURLOPT_CUSTOMREQUEST => 'POST',
-				CURLOPT_POSTFIELDS => json_encode($graph_params),
-				CURLOPT_HTTPHEADER => [
-					'Authorization: Bearer ' . $this->api_key,
-					'Content-Type: application/json'
-				],
-			]);
-			$response = curl_exec($curl);
-			curl_close($curl);
+			$members_all_updated = [];
+			$members_errors = [];
 
-			return json_decode($response);
-		}
+			if(isset($members->members->nodes)) {
+				foreach($members->members->nodes as $value) {
+					echo "Executing...\r";
+					if(($value->profilePictureId == null && $email == '') || $email != '') {
+						$user = Users::getByLogin($value->email);
+						if(!$user) {
+							$new_member_error_object = [
+								'email' => $value->email,
+								'error' => 'User not found by email in Dojo db'
+							];
+							log_to_file($new_member_error_object, 'mq');
+							array_push($members_errors, json_encode($new_member_error_object));
+							continue;
+						}
 
-		private function generateNodeFields($nodes, $fields) {
+						$avatar_url = 'https://sensei.growthinstitute.com/users/' . $user->id . '/avatar';
+						try {
+							$json = @file_get_contents($avatar_url); //getting the file content
+							if($json == false) {
+								throw new Exception('Something really gone wrong');
+							}
+						} catch(Exception $e) {
+							log_to_file("Error with url, avatar not found:" . $avatar_url, 'mq');
+							continue;
+						}
+						$finfo = new finfo(FILEINFO_MIME_TYPE);
+						$image_type = $finfo->buffer($json);
+						$arguments['contentType'] = $image_type;
+						$upload_object = $tribe->createImages($arguments, $params);
 
-			foreach($fields as $k => $field) {
-				if(is_int($k)) {
-                    if(is_int($field)){
-                        for($i= 1; $i <= $field; $i++){
-                            $nodes = $nodes->prev();
-                        }
-                        continue;
-                    }
-					$nodes = $nodes->use($field);
-				} else {
-					$nodes = $nodes->$k;
-					if(is_array($field)) {
-						$nodes = $this->generateNodeFields($nodes, $field);
+						if(isset($upload_object->data->errors)) {
+							$status = $this->handleErrors($upload_object->data->errors);
+							log_to_file($upload_object->data->errors, 'mq');
+							array_push($members_errors, json_encode($upload_object->data->errors));
+							continue;
+						}
+
+						$curl = curl_init();
+						$requestData = json_decode($upload_object->fields);
+						$requestData->{'Content-type'} = $image_type;
+						$requestData->{'file'} = file_get_contents($avatar_url);
+						curl_setopt_array($curl, [
+							CURLOPT_URL => $upload_object->signedUrl,
+							CURLOPT_RETURNTRANSFER => true,
+							CURLOPT_ENCODING => '',
+							CURLOPT_MAXREDIRS => 10,
+							CURLOPT_TIMEOUT => 0,
+							CURLOPT_FOLLOWLOCATION => true,
+							CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+							CURLOPT_CUSTOMREQUEST => 'POST',
+							CURLOPT_POSTFIELDS => $requestData,
+							CURLOPT_HTTPHEADER => [
+							],
+						]);
+						$response = curl_exec($curl);
+						curl_close($curl);
+						if($response == '') {
+							$params_member = [
+								'profilePictureId',
+								'email',
+								'updatedAt',
+								'username'
+							];
+
+							$fields_member = [
+								"id" => $value->id
+							];
+
+							$variables_member = [
+								'profilePictureId' => $upload_object->mediaId
+							];
+
+							$member_updated = $tribe->updateMember($variables_member, $params_member, $fields_member);
+
+							if(isset($member_updated->errors)) {
+								$status = $this->handleErrors($member_updated->errors);
+								log_to_file($member_updated->errors, 'mq');
+								array_push($members_errors, json_encode($member_updated->errors));
+								continue;
+
+							}
+							echo "Executing..";
+							array_push($members_all_updated, $member_updated);
+						}
+
 					}
 				}
 			}
 
-            return $nodes;
-		}
-
-		private function generateNestedNodeFields(){
-			foreach($fields as $k => $field) {
-				if(is_int($k)) {
-                    if(is_int($field)){
-                        for($i= 1; $i <= $field; $i++){
-                            $nodes = $nodes->prev();
-                        }
-                        continue;
-                    }
-					$nodes = $nodes->use($field);
-				} else {
-					$nodes = $nodes->$k;
-					if(is_array($field)) {
-						$nodes = $this->generateNestedNodeFields($nodes, $field);
-					}
-				}
+			$this->properties['updated'] = $members_all_updated;
+			$this->properties['total'] = sizeof($members_all_updated);
+			$this->properties['errors'] = $members_errors;
+			if($this->request->post("email")) {
+				$this->result = 'success';
+				$this->respond();
 			}
-
-            return $nodes;
+			log_to_file($this->properties, 'mq');
+			return json_encode($this->properties);
 		}
 
-		private function getCollection($name, $fields = [], $params = [], $defaults = []) {
-
-			$instance = new Graph($name, array_merge($params, $defaults));
-
-			$instance->nodes
-				->prev()
-				->use('totalCount');
-
-			$nodes = $instance->nodes;
-
-			$nodes = $this->generateNodeFields($nodes, $fields);
-
-			$query = $instance->root()->query();
-			$response = $this->request($query);
-
-			if(isset($response->data->$name->nodes)) {
-
-				return $response->data->$name->nodes;
-			}
-
-			return $response;
-		}
-
-		private function createInstance($name, $fields = [], $variables = [], $params = []) {
-
-			$mutation = new Mutation($name, array_merge($fields, [ 'input'=> new Variable('input', ucwords($name) . 'Input!', '') ]));
-
-			$query = $this->generateNodeFields($mutation, $params);
-
-			$query = $query->root()->query();
-
-			$response = $this->request($query, $variables);
-
-			if(isset($response->data->$name)) {
-
-				return $response->data->$name;
-			}
-
-			return $response;
-		}
-		private function createInstanceName($name, $fields = [], $variables = [], $params = [], $instance) {
-
-			$mutation = new Mutation($name, array_merge($fields, [ 'input'=> new Variable('input', $instance . 'Input!', '') ]));
-
-			$query = $this->generateNodeFields($mutation, $params);
-
-			$query = $query->root()->query();
-
-			$response = $this->request($query, $variables);
-
-			if(isset($response->data->$name)) {
-
-				return $response->data->$name;
-			}
-
-			return $response;
-		}
-
-		private function mappingField($name, $type, $value) {
-
-			if(in_array($type, ['text', 'html'])) $value = "\"{$value}\"";
-
-			return [
-				'key' => $name,
-				'type' => $type,
-				'value' => $value
+		function getPosts($id) {
+			global $app;
+			$space_id = $id;
+			$tribe = new Tribe(GeneralOptions::getOption('tribe_app_token'));
+			$arguments = [
+				"limit" => 100000,
+				"spaceIds" => [$space_id]
 			];
+			$params = [
+				"totalCount"
+			];
+			$this->data = $tribe->getPosts($arguments, $params);
+			if(isset($this->data->errors)) {
+				$status = $this->handleErrors($this->data->errors);
+				$this->response->setStatus($status);
+				$this->respond();
+			}
+
+			$this->result = 'success';
+			$this->respond();
 		}
 
-		public function getPosts($arguments, $params) {
-
-			$instance = new Graph('posts', $arguments);
-			$query = $this->generateNodeFields($instance, $params);
-			$query = $instance->root()->query();			
-			$response = $this->request($query);
-			return $response->data->posts;
+		function getCollections() {
+			global $app;
+			$tribe = new Tribe(GeneralOptions::getOption('tribe_app_token'));
+			$params = [
+				"id",
+				"name",
+				"slug"
+			];
+			$res = $tribe->getCollections($params);
+			$this->data = $res;
+			$this->result = 'success';
+			$this->respond();
 		}
 
-		public function getSpace($arguments, $params){
-			$instance = new Graph('space', $arguments);
-			$query = $this->generateNodeFields($instance, $params);
-			$query = $instance->root()->query();			
-			$response = $this->request($query);
-			return $response;
-		}
-
-		public function getPost($arguments, $params){
-			$instance = new Graph('post', $arguments);
-			$query = $this->generateNodeFields($instance, $params);
-			$query = $instance->root()->query();			
-			$response = $this->request($query);
-			return $response->data;
-		}
-
-		public function updatePost($post_id, $content, $params){
-			$fields = ['id' => $post_id];
-
-			$variables = [
-				'input' => [
-					'publish' => true,
-					'mappingFields' => [
-						$this->mappingField('title', 'text', ""),
-						$this->mappingField('content', 'html', $content),
-					]
+		function deleteAllSpaces() {
+			global $app;
+			$collection_id = $this->request->post("collectionId");
+			$tribe = new Tribe(GeneralOptions::getOption('tribe_app_token'));
+			$arguments = [
+				"limit" => 100000
+			];
+			$params = [
+				"totalCount",
+				"nodes" => [
+					"id",
+					"url",
+					"collection" => [
+						"id",
+						"name"
+					],
+					"name",
+					"slug"
 				]
 			];
+			$res = $tribe->getSpaces($arguments, $params);
 
-			return $this->createInstance('updatePost', $fields, $variables, $params);			
+			// delete Spaces
+			foreach($res->spaces->nodes as $value) {
+				$arguments = [
+					"id" => $value->id
+				];
+
+				$params = [
+					"status"
+				];
+
+				$res2 = $tribe->deleteSpace($params, $arguments);
+			}
+
+			$this->data = $res;
+			$this->result = 'success';
+			$this->respond();
+
 		}
-		public function createPost($space_id, $title, $content, $params = [], $fields = []) {
 
-			$fields = array_merge(['spaceId' => $space_id], $fields);
+		function updateSpace() {
+			global $app;
+			$space_id = $this->request->post("space_id");
+			$tribe = new Tribe(GeneralOptions::getOption('tribe_app_token'));
+			$params = [
+				'id',
+				'name',
+				'private',
+				'hidden',
+				'inviteOnly',
+				'slug'
 
-			$variables = [
-				'input' => [
-					'postTypeId' => 'udE3pz9DBGv7nsr',
-					'publish' => false,
-					'mappingFields' => [
-						$this->mappingField('title', 'text', $title),
-						$this->mappingField('content', 'html', $content)
-					]
-				]
 			];
-
-			return $this->createInstance('createPost', $fields, $variables, $params);
-		}
-
-		public function getSpaces($arguments, $params){
-			$instance = new Graph('spaces', $arguments);
-			$query = $this->generateNodeFields($instance, $params);
-			$query = $instance->root()->query();			
-			$response = $this->request($query);
-			return $response->data;
-		}
-		public function getCollections($params){
-			$instance = new Graph('collections');
-			$query = $this->generateNodeFields($instance, $params);
-			$query = $instance->root()->query();			
-			$response = $this->request($query);
-			return $response;
-		}
-		public function updateSpace($params, $variables, $input) {
 
 			$input = [
-				'input' => $input
+				'hidden' => (boolean )true,
+				'private' => (boolean)true
 			];
+			$variables = [
+				"id" => $space_id
+			];
+			$this->data = $tribe->updateSpace($params, $variables, $input);
+			if(isset($this->data->errors)) {
+				$status = $this->handleErrors($this->data->errors);
+				$this->response->setStatus($status);
+				$this->respond();
+			}
+			$this->result = 'success';
+			$this->respond();
 
-			return $this->createInstance('updateSpace', $variables, $input, $params);
 		}
 
-		public function createReply($post_id, $content, $params = [], $fields = []) {
+		function joinSpace() {
+			global $app;
+			$tribe = new Tribe(GeneralOptions::getOption('tribe_app_token'));
+			$space_id = $this->request->post('spaceId');
+			$member_id = $this->request->post('memberId');
+			$token = GeneralOptions::getOption('tribe_member_token-' . $member_id);
+			$response = $tribe->joinSpace($token, $space_id);
+			$this->data = $response;
+			if(isset($this->data->errors) && $this->data->data != null) {
+				$status = $this->handleErrors($this->data->errors, $member_id);
+				$this->response->setStatus($status);
+				$this->respond();
+			} else if(isset($this->data->errors) && $this->data->data == null) {
+				$this->data = "Already joined to this space";
+			}
+			$this->result = 'success';
+			$this->respond();
+		}
 
-			$fields = array_merge(['postId' => $post_id], $fields);
+		function sso() {
+			global $app;
+			$userData = [
+				'sub' => $this->request->post('sub'), // user's ID in your product
+				'email' => $this->request->post('email'),
+				'name' => $this->request->post('name')
+			];
+			$tribe_object = get_item($app->getOption('keys'), 'tribe');
+			$private_key = $tribe_object['private_key'];
+			$this->data = JWT::encode($userData, $private_key, 'HS256');
+			if(isset($this->data->errors)) {
+				$status = $this->handleErrors($this->data->errors);
+				$this->response->setStatus($status);
+				$this->respond();
+			}
+			$url = 'https://growth-institute.tribeplatform.com/api/auth/sso?redirect_uri=/&jwt=' . $this->data;
+			$curl_handle = curl_init();
+			curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, 1);
+			curl_setopt($curl_handle, CURLOPT_URL, $url);
+			$url_content = curl_exec($curl_handle);
+			curl_close($curl_handle);
+			// $this->checkUserSpaces();
+			$this->result = 'success';
+			$this->respond();
+		}
+
+
+		function createSpace() {
+			global $app;
+			$tribe = new Tribe(GeneralOptions::getOption('tribe_app_token'));
+			$params = [
+				'id',
+				'name',
+				'private',
+				'hidden',
+				'inviteOnly',
+				'slug'
+
+			];
 
 			$variables = [
-				'input' => [
-					'postTypeId' => 'udE3pz9DBGv7nsr',
-					'publish' => true,
-					'mappingFields' => [
-						$this->mappingField('title', 'text', ''),
-						$this->mappingField('content', 'html', $content)
+				'name' => $this->request->post('name'),
+				'hidden' => (boolean )false,
+				'private' => (boolean)false,
+				'inviteOnly' => (boolean)false,
+				'collectionId' => $this->request->post('collectionId')
+			];
+			$this->data = $tribe->createSpace($params, $variables);
+			if(isset($this->data->errors)) {
+				$status = $this->handleErrors($this->data->errors);
+				$this->response->setStatus($status);
+				$this->respond();
+			}
+			$this->result = 'success';
+			$this->respond();
+		}
+
+		function getTribeAccessToken() {
+			global $app;
+			// Get our credentials
+			$tribe_object = get_item($app->getOption('keys'), 'tribe');
+			$network_id = $tribe_object['network_id'];
+			$client_id = $tribe_object['client_id'];
+			$client_secret = $tribe_object['client_secret'];
+			$memberId = $this->request->post('memberId');
+			// Execute just for the first time
+			$res = Tribe::getAppToken($network_id, 'https://' . $client_id . ':' . $client_secret . '@app.tribe.so/graphql', $memberId);
+			if(isset($res->data->limitedToken->accessToken) && GeneralOptions::setOption('tribe_member_token-' . $memberId, $res->data->limitedToken->accessToken)) {
+				$this->data = 'Member access token set successfully';
+			} else {
+				$this->data = 'Error: Member Access Token not saved';
+			}
+			$this->result = 'success';
+			$this->respond();
+		}
+
+		function getSpace($id) {
+			global $app;
+			$arguments = [
+				'id' => $id
+			];
+			$params = [
+				'id',
+				'name',
+				'slug'
+			];
+			$tribe = new Tribe(GeneralOptions::getOption('tribe_app_token'));
+			$this->data = $tribe->getSpace($arguments, $params);
+			if(isset($this->data->errors)) {
+				$status = $this->handleErrors($this->data->errors);
+				$this->response->setStatus($status);
+				$this->respond();
+			}
+			$this->data = $this->data->data->space;
+			$this->result = 'success';
+			$this->respond();
+		}
+
+		function updatePost() {
+			global $app;
+			$tribe = new Tribe(GeneralOptions::getOption('tribe_app_token'));
+
+			$post_id = $this->request->post('id');
+			$content = $this->request->post('content');
+			$params_mapping = [
+				'id',
+				'title',
+				'postTypeId',
+				'repliesCount',
+				'postType' => [
+					'id',
+					'name',
+					'updatedAt',
+					'mappings' => [
+						'key',
+						'title',
+						'type',
+						'field',
+						'description'
 					]
 				]
 			];
 
-			return $this->createInstanceName('createReply', $fields, $variables, $params, "CreatePost");
+			$this->data = $tribe->updatePost($post_id, $content, $params_mapping);
+			if(isset($this->data->errors)) {
+				$status = $this->handleErrors($this->data->errors);
+				$this->response->setStatus($status);
+				$this->respond();
+			} else {
+				$this->result = 'success';
+			}
+
+			$this->respond();
+
 		}
-		public function createSpace($params = [], $variables = [], $fields = []) {
-			/*  Params lo que quieres saber */
-			/*  Fields parametros de un solo nivel*/
-			/*  Variables parametros de varios niveles */
-			$variables = [
-				'input' => $variables
+
+		function createPost() {
+			global $app;
+			$tribe = new Tribe(GeneralOptions::getOption('tribe_app_token'));
+			$params_mapping = [
+				'id',
+				'title',
+				'postTypeId',
+				'repliesCount',
+				'postType' => [
+					'id',
+					'name',
+					'updatedAt',
+					'mappings' => [
+						'key',
+						'title',
+						'type',
+						'field',
+						'description'
+					]
+				]
 			];
-			return $this->createInstance('createSpace', $fields, $variables, $params);
+			$title = $this->request->post('title');
+			$content = $this->request->post('content');
+			$space_id = $this->request->post('space_id');
+			$this->data = $tribe->createPost($space_id, $title, $content, $params_mapping);
+			if(isset($this->data->errors)) {
+				$status = $this->handleErrors($this->data->errors);
+				$this->response->setStatus($status);
+				$this->respond();
+			} else {
+				$this->result = 'success';
+			}
+			$this->respond();
 		}
 
-		public function deleteSpace($params = [], $variables = [], $fields = []){
+		function createReply() {
+			global $app;
+			$member_id = $this->request->post('member_id');
+			$tkn = GeneralOptions::getOption('tribe_member_token-' . $member_id);
+			$tribe = new Tribe($tkn);
+			$params_mapping = [
+				'id',
+				'title',
+				'status'
+			];
+			$content = $this->request->post('content');
+			$post_id = $this->request->post('post_id');
+			$this->data = $tribe->createReply($post_id, $content, $params_mapping);
+			if(isset($this->data->errors)) {
+				$status = $this->handleErrors($this->data->errors, $member_id);
+				$this->response->setStatus($status);
+				$this->respond();
+			} else {
+				$this->result = 'success';
+			}
+			$this->respond();
+		}
 
+		function getPost($id) {
+			global $app;
+			$arguments = [
+				'id' => $id
+			];
 			$params = [
-				"status"
+				'id',
+				'repliesCount',
+				'mappingFields' => [
+					'key',
+					'type',
+					'value'
+				]
 			];
+			$tribe = new Tribe(GeneralOptions::getOption('tribe_app_token'));
+			$this->data = $tribe->getPost($arguments, $params);
+			if(isset($this->data->errors)) {
+				$status = $this->handleErrors($this->data->errors);
+				$this->response->setStatus($status);
+				$this->respond();
+			}
+			$refactor = array();
+			foreach($this->data->post->mappingFields as $value) {
+				$refactor[$value->key] = $value;
+				$refactor[$value->key]->value = preg_replace('~^"?(.*?)"?$~', '$1', $refactor[$value->key]->value);
+				$refactor[$value->key]->value = str_replace('"', "'", $refactor[$value->key]->value);
+				$refactor[$value->key]->value = str_replace('\\', "", $refactor[$value->key]->value);
+			}
 
-			$mutation = new Mutation('deleteSpace');
+			$this->data->post->mappingFields = $refactor;
+			$this->data = $this->data->post;
+			$this->result = 'success';
+			$this->respond();
+		}
 
-			$query = $mutation->deleteSpace($variables)->use('status')->root()->query();
-			$response = $this->request($query);
+		function getMember($email) {
+			global $app;
+			$tribe = new Tribe(GeneralOptions::getOption('tribe_app_token'));
+			$members = $tribe->getMembers($email);
+			$this->data = $members->members->nodes[0];
+			if(isset($this->data->errors)) {
+				$status = $this->handleErrors($this->data->errors);
+				$this->response->setStatus($status);
+				$this->result = 'error';
+				$this->respond();
+			}
+			$this->result = 'success';
+			$this->respond();
+		}
+
+		function handleErrors($errors, $memberId = null) {
+			$sensei_errors = array();
+			$status = '';
+			foreach($errors as $error) {
+				switch($error->message) {
+					case "Unauthorized":
+						if($memberId != null) {
+							array_push($sensei_errors, $this->setAccessToken($memberId));
+						} else {
+							array_push($sensei_errors, $this->setAccessToken());
+						}
+						$status = 401;
+						break;
+					case "Internal Server Error":
+						array_push($sensei_errors, "Tribe Internal Server Error");
+						$status = 500;
+						break;
+					default:
+						$status = 500;
+						break;
+				}
+			}
+			$this->data = [
+				"sensei errors: " => $sensei_errors,
+				"tribe_errors: " => $errors
+			];
+			return $status;
+		}
+
+		function setAccessToken($member = null) {
+			global $app;
+
+			// Get our credentials
+			$response = '';
+			$tribe_object = get_item($app->getOption('keys'), 'tribe');
+			$network_id = $tribe_object['network_id'];
+			$client_id = $tribe_object['client_id'];
+			$client_secret = $tribe_object['client_secret'];
+			// Execute just for the first time
+			if($member != null) {
+				// Execute just for the first time
+				$res = Tribe::getAppToken($network_id, 'https://' . $client_id . ':' . $client_secret . '@app.tribe.so/graphql', $member);
+				if(isset($res->data->limitedToken->accessToken) && GeneralOptions::setOption('tribe_member_token-' . $member, $res->data->limitedToken->accessToken)) {
+					$response = 'Member access token set successfully';
+				} else {
+					$response = 'Error: Member Access Token not saved';
+				}
+
+			} else {
+				$res = Tribe::getAppToken($network_id, 'https://' . $client_id . ':' . $client_secret . '@app.tribe.so/graphql');
+				if(isset($res->data->limitedToken->accessToken) && GeneralOptions::setOption('tribe_app_token', $res->data->limitedToken->accessToken)) {
+					$response = "Unauthorized: Tribe Access Token was renewed, try again";
+				} else {
+					$response = "Unauthorized: Tribe Access Token was not regenrated open nginx error log";
+				}
+			}
+
 			return $response;
 		}
-		public function createImages( $variables = [], $params = [], $fields = []) {
 
-			$variables = [
-				'input' => $variables
+		static public function checkUserSpaces() {
+			$message = MessageQ::newInstance();
+			$message->sendMessage(json_encode(["function" => "joinAllSpaces", "params" => ["a" => 2, "b" => 2]]));
+			$message->close();
+		}
+
+		function getReplies($id) {
+			global $app;
+			$arguments = [
+				'postId' => $id,
+				'limit' => 1000
 			];
-			$mutation = new Mutation('createImages', [ 'input'=> new Variable('input', '[CreateImageInput!]!', '') ]);
-			
-			$query = $this->generateNodeFields($mutation, $params);
+			$params = [
+				'pageInfo' =>[
+					'endCursor',
+					'hasNextPage',
+					1
+				],
+				'nodes' => [
+					'id',
+					'title',
+					'slug',
+					'description',
+					'fields' => [
+						'key',
+						'value',
+						1
+					],
+					'owner' => [
+						'member' =>[
+							'name',
+							'profilePicture' => [
+								'...on Image'=>[
+									'urls'=>[
+										'thumb',
+									]
+								]
+							]
+						]
+					],
+				]
+			];
+			$nodes = [];
+			$tribe = new Tribe(GeneralOptions::getOption('tribe_app_token'));
+			$responseObject = $tribe->getReplies($arguments, $params);
+			if(isset($this->data->errors)) {
+				$status = $this->handleErrors($this->data->errors);
+				$this->response->setStatus($status);
+				$this->respond();
+			}
+			$nodes[] = $responseObject->replies->nodes;
+			while($responseObject->replies->pageInfo->hasNextPage){
+				$responseObject = $tribe->getReplies($arguments, $params);
+				$nodes[] = $responseObject->replies->nodes;
+			}
 
-			$query = $query->root()->query();
-
-			$response = $this->request($query, $variables);
-            $image_api_object =  $response->data->createImages[0];
-            // Validate response
-            if(!isset($image_api_object)) {
-                return  $response->data;
-            }
-			return $image_api_object;
-
+			$this->data = $nodes;
+			$this->result = 'success';
+			$this->respond();
 		}
 
-        public function updateMember( $variables = [], $params = [], $fields = []){
-            $variables = [
-                'input' => $variables
-            ];
-            return $this->createInstance('updateMember', $fields, $variables, $params);
-        }
-
-        public function getNotifications($arguments, $params) {
-
-            $instance = new Graph('getNotifications', $arguments);
-            $query = $this->generateNodeFields($instance, $params);
-            $query = $instance->root()->query();
-            $response = $this->request($query);
-            if(isset($response->data->getNotifications->nodes)){
-                $response = $response->data->getNotifications->nodes;
-            }else{
-                $response = $response->data;
-            }
-            return $response;
-        }
-
-        public function getNotificationsCount($params) {
-
-            $instance = new Graph('getNotificationsCount');
-            $query = $this->generateNodeFields($instance, $params);
-            $query = $instance->root()->query();
-            $response = $this->request($query);
-            return $response;
-        }
-
-        public function readNotification($arguments){
-			$mutation = new Mutation('readNotification');
-            $mutation->readNotification($arguments)->use('status')->root()->query();
-			$query = $mutation;
-			$query = $query->root()->query();
-
-            print($query);
-			$response = $this->request($query);
-            print(json_encode($response));
-
-            return $response;
-        }
-		
-		public function getReplies($arguments, $params){
-			$instance = new Graph('replies', $arguments);
-			$query = $this->generateNodeFields($instance, $params);
-			$query = $instance->root()->query();			
-			$response = $this->request($query);
-			return $response->data;
-		}
 	}
-?>
