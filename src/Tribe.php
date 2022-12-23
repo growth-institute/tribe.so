@@ -441,7 +441,8 @@
 			$query = $this->generateNodeFields($instance, $params);
 			$query = $instance->root()->query();			
 			$response = $this->request($query);
-			if($responseObject->errors) return $response;
+			
+			if($response->errors) return $response;
 			return $response->data;
 		}
 	}
