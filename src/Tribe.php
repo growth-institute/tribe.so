@@ -428,8 +428,6 @@
             $mutation->readNotification($arguments)->use('status')->root()->query();
 			$query = $mutation;
 			$query = $query->root()->query();
-
-            print($query);
 			$response = $this->request($query);
             print(json_encode($response));
 
@@ -466,7 +464,8 @@
 
 		public function rawQuery($query){
 			$response = $this->request($query);
-			return $response;
+			if($response->errors) return $response;
+			return $response->data;
 		}
 	}
 ?>
