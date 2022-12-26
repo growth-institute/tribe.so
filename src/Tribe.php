@@ -428,8 +428,6 @@
             $mutation->readNotification($arguments)->use('status')->root()->query();
 			$query = $mutation;
 			$query = $query->root()->query();
-
-            print($query);
 			$response = $this->request($query);
             print(json_encode($response));
 
@@ -442,6 +440,30 @@
 			$query = $instance->root()->query();			
 			$response = $this->request($query);
 			
+			if($response->errors) return $response;
+			return $response->data;
+		}
+
+		public function addReaction($arguments, $params, $variables){
+			return $this->createInstance('addReaction', $arguments, $variables, $params);
+		}
+		public function removeReaction($arguments){
+			$mutation = new Mutation('removeReaction');
+
+			$mutation->removeReaction($arguments)->use('status')->root()->query();
+			
+			$query = $mutation;
+			
+			$query = $query->root()->query();
+						
+			$response = $this->request($query);
+			
+			return $response->data->removeReaction;
+			
+		}
+
+		public function rawQuery($query){
+			$response = $this->request($query);
 			if($response->errors) return $response;
 			return $response->data;
 		}
