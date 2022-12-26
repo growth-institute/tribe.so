@@ -467,5 +467,15 @@
 			if($response->errors) return $response;
 			return $response->data;
 		}
+
+		public function getFeed($arguments, $params){
+			$instance = new Graph('feed', $arguments);
+			$query = $this->generateNodeFields($instance, $params);
+			$query = $instance->root()->query();			
+			$response = $this->request($query);
+			
+			if($response->errors) return $response;
+			return $response->data->feed;
+		}
 	}
 ?>
