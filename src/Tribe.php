@@ -350,6 +350,23 @@
 
 			return $this->createInstanceName('createReply', $fields, $variables, $params, "CreatePost");
 		}
+
+		public function createReplyV2($post_id, $content, $params = [], $fields = []) {
+
+			$fields = array_merge(['postId' => $post_id], $fields);
+
+			$variables = [
+				'input' => [
+					'postTypeId' => 'fu1HHZaXZzs82C5',
+					'publish' => true,
+					'mappingFields' => [
+						$this->mappingField('content', 'html', $content)
+					]
+				]
+			];
+
+			return $this->createInstanceName('createReply', $fields, $variables, $params, "CreatePost");
+		}
 		public function createSpace($params = [], $variables = [], $fields = []) {
 			/*  Params lo que quieres saber */
 			/*  Fields parametros de un solo nivel*/
