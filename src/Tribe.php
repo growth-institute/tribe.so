@@ -437,7 +437,8 @@
             $query = $this->generateNodeFields($instance, $params);
             $query = $instance->root()->query();
             $response = $this->request($query);
-            return $response;
+			if($response->errors) return $response;
+			return $response->data;
         }
 
         public function readNotification($arguments){
@@ -446,9 +447,8 @@
 			$query = $mutation;
 			$query = $query->root()->query();
 			$response = $this->request($query);
-            print(json_encode($response));
-
-            return $response;
+			if($response->errors) return $response;
+			return $response->data->readNotification;
         }
 		
 		public function getReplies($arguments, $params){
