@@ -414,7 +414,9 @@
             $variables = [
                 'input' => $variables
             ];
-            return $this->createInstance('updateMember', $fields, $variables, $params);
+			$response = $this->createInstance('updateMember', $fields, $variables, $params);
+			if($response->errors) return $response;
+			return $response;
         }
 
         public function getNotifications($arguments, $params) {
