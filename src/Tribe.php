@@ -496,5 +496,102 @@
 			if($response->errors) return $response;
 			return $response->data->feed;
 		}
+
+		public function joinSpaceUser($arguments){
+			$mutation = new Mutation('joinSpace');
+
+            $mutation->joinSpace($arguments)->use('status')->root()->query();
+
+			$query = $mutation;
+
+			$query = $query->root()->query();
+
+			$response = $this->request($query);
+
+			if($response->errors) return $response;
+
+			return $response->data;
+
+		}
+
+		public function leaveSpace($arguments){
+			$mutation = new Mutation('leaveSpace');
+
+            $mutation->leaveSpace($arguments)->use('status')->root()->query();
+
+			$query = $mutation;
+
+			$query = $query->root()->query();
+
+			$response = $this->request($query);
+
+			if($response->errors) return $response;
+
+			return $response->data;
+
+		}
+
+		public function removeAllMembers($space_id){
+			$memberIds = [];
+			$arguments = [
+				"spaceId" => $space_id,
+				"limit"=> 1000
+			];
+			$params = [
+				"pageInfo" => [
+					"endCursor",
+					"hasNextPage",
+					1
+				],
+				"nodes" => [
+					"member" => [
+						"id"
+					]
+				]
+			];
+			$instance = new Graph('spaceMembers', $arguments);
+			$query = $this->generateNodeFields($instance, $params);
+			$query = $instance->root()->query();	
+			$response = $this->request($query);
+			if($response->errors) return $response;
+			$spaceMembers = $response->data->spaceMembers;
+			foreach($spaceMembers->nodes as $node){
+				$memberIds[] = $node->member->id;
+			}
+			while($spaceMembers->pageInfo->hasNextPage){
+				$arguments = [
+					"limit"=> 1000,
+					"after" => $spaceMembers->pageInfo->endCursor,
+					"spaceId" => $space_id,
+				];
+				
+				$instance = new Graph('space', $arguments);
+				$query = $this->generateNodeFields($instance, $params);
+				$query = $instance->root()->query();			
+				$response = $this->request($query);
+				foreach($response->nodes as $node){
+					$memberIds[] = $node->member->id;
+				}
+			}
+
+			$mutation = new Mutation('removeSpaceMembers');
+			$arguments = [
+				"memberIds" => $memberIds,
+				"spaceId" => $space_id
+			];
+            $mutation->removeSpaceMembers($arguments)->use('status')->root()->query();
+
+			$query = $mutation;
+
+			$query = $query->root()->query();
+
+			$response = $this->request($query);
+
+			if($response->errors) return $response;
+
+			return $response->data;
+
+		}
+
 	}
 ?>
