@@ -415,7 +415,7 @@
                 'input' => $variables
             ];
 			$response = $this->createInstance('updateMember', $fields, $variables, $params);
-			if($response->errors) return $response;
+			if(isset($response->errors)) return $response;
 			return $response;
         }
 
@@ -439,7 +439,7 @@
             $query = $this->generateNodeFields($instance, $params);
             $query = $instance->root()->query();
             $response = $this->request($query);
-			if($response->errors) return $response;
+			if(isset($response->errors)) return $response;
 			return $response->data;
         }
 
@@ -449,7 +449,7 @@
 			$query = $mutation;
 			$query = $query->root()->query();
 			$response = $this->request($query);
-			if($response->errors) return $response;
+			if(isset($response->errors)) return $response;
 			return $response->data->readNotification;
         }
 		
@@ -459,7 +459,7 @@
 			$query = $instance->root()->query();			
 			$response = $this->request($query);
 			
-			if($response->errors) return $response;
+			if(isset($response->errors)) return $response;
 			return $response->data;
 		}
 
@@ -483,7 +483,7 @@
 
 		public function rawQuery($query){
 			$response = $this->request($query);
-			if($response->errors) return $response;
+			if(isset($response->errors)) return $response;
 			return $response->data;
 		}
 
@@ -493,7 +493,7 @@
 			$query = $instance->root()->query();			
 			$response = $this->request($query);
 			
-			if($response->errors) return $response;
+			if(isset($response->errors)) return $response;
 			return $response->data->feed;
 		}
 
@@ -508,7 +508,7 @@
 
 			$response = $this->request($query);
 
-			if($response->errors) return $response;
+			if(isset($response->errors)) return $response;
 
 			return $response->data;
 
@@ -525,7 +525,7 @@
 
 			$response = $this->request($query);
 
-			if($response->errors) return $response;
+			if(isset($response->errors)) return $response;
 
 			return $response->data;
 
@@ -553,7 +553,7 @@
 			$query = $this->generateNodeFields($instance, $params);
 			$query = $instance->root()->query();	
 			$response = $this->request($query);
-			if($response->errors) return $response;
+			if(isset($response->errors)) return $response;
 			$spaceMembers = $response->data->spaceMembers;
 			foreach($spaceMembers->nodes as $node){
 				$memberIds[] = $node->member->id;
@@ -587,11 +587,24 @@
 
 			$response = $this->request($query);
 
-			if($response->errors) return $response;
+			if(isset($response->errors)) return $response;
 
 			return $response->data;
 
 		}
 
+		public function getMemberSpaces($memberId, $params){
+			$arguments = [
+				"memberId" => $memberId,
+				"limit" => 1
+			];
+			$instance = new Graph('memberSpaces', $arguments);
+			$query = $this->generateNodeFields($instance, $params);
+			$query = $instance->root()->query();			
+			$response = $this->request($query);
+			if(isset($response->errors)) return $response;
+			return $response->data;
+
+		}
 	}
 ?>
