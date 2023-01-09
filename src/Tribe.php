@@ -565,7 +565,7 @@
 					"spaceId" => $space_id,
 				];
 				
-				$instance = new Graph('space', $arguments);
+				$instance = new Graph('spaceMembers', $arguments);
 				$query = $this->generateNodeFields($instance, $params);
 				$query = $instance->root()->query();			
 				$response = $this->request($query);
