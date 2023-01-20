@@ -456,7 +456,8 @@
 		public function getReplies($arguments, $params){
 			$instance = new Graph('replies', $arguments);
 			$query = $this->generateNodeFields($instance, $params);
-			$query = $instance->root()->query();			
+			$query = $instance->root()->query();
+            $query = str_replace('"createdAt"',"createdAt", $query);
 			$response = $this->request($query);
 			
 			if(isset($response->errors)) return $response;
