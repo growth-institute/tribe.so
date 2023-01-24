@@ -457,7 +457,7 @@ class Tribe {
         $instance = new Graph('replies', $arguments);
         $query = $this->generateNodeFields($instance, $params);
         $query = $instance->root()->query();
-        $query = str_replace('"createdAt"',"createdAt", $query);
+        $query = str_replace('"updatedAt"',"updatedAt", $query);
         $response = $this->request($query);
 
         if(isset($response->errors)) return $response;
