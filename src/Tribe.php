@@ -10,15 +10,30 @@ use GraphQL\Variable;
 
 class Tribe {
 
+    /**
+     * @var
+     */
     private $api_key;
+    /**
+     * @var
+     */
     private $community_id;
 
 
+    /**
+     * @param $api_key
+     */
     public function __construct($api_key) {
         $this->api_key = $api_key;
         $this->baseUrl = 'https://app.tribe.so/graphql';
     }
 
+    /**
+     * @param $networkId
+     * @param $url
+     * @param $memberId
+     * @return mixed
+     */
     public function getAppToken($networkId, $url, $memberId = ''){
         $arguments = [
             "context" => "NETWORK",
@@ -55,6 +70,11 @@ class Tribe {
         return json_decode($response);
     }
 
+    /**
+     * @param $user_access_token
+     * @param $space_id
+     * @return mixed
+     */
     public function joinSpace($user_access_token, $space_id){
         $arguments = [
             "spaceId" => $space_id
@@ -90,6 +110,11 @@ class Tribe {
         curl_close($curl);
         return json_decode($response);
     }
+
+    /**
+     * @param $query
+     * @return mixed
+     */
     public function getMembers($query = ''){
         $arguments = [
             "limit" => 1000,
@@ -111,6 +136,12 @@ class Tribe {
         $response = $this->request($query);
         return $response->data;
     }
+
+    /**
+     * @param $query
+     * @param $variables
+     * @return mixed
+     */
     private function request($query, $variables = []) {
 
         $curl = curl_init();
@@ -118,7 +149,6 @@ class Tribe {
             'query' => $query,
             'variables' => $variables
         ];
-
         curl_setopt_array($curl, [
             CURLOPT_URL => $this->baseUrl,
             CURLOPT_RETURNTRANSFER => true,
@@ -140,6 +170,11 @@ class Tribe {
         return json_decode($response);
     }
 
+    /**
+     * @param $nodes
+     * @param $fields
+     * @return mixed
+     */
     private function generateNodeFields($nodes, $fields) {
 
         foreach($fields as $k => $field) {
@@ -162,27 +197,14 @@ class Tribe {
         return $nodes;
     }
 
-    private function generateNestedNodeFields(){
-        foreach($fields as $k => $field) {
-            if(is_int($k)) {
-                if(is_int($field)){
-                    for($i= 1; $i <= $field; $i++){
-                        $nodes = $nodes->prev();
-                    }
-                    continue;
-                }
-                $nodes = $nodes->use($field);
-            } else {
-                $nodes = $nodes->$k;
-                if(is_array($field)) {
-                    $nodes = $this->generateNestedNodeFields($nodes, $field);
-                }
-            }
-        }
 
-        return $nodes;
-    }
-
+    /**
+     * @param $name
+     * @param $fields
+     * @param $params
+     * @param $defaults
+     * @return mixed
+     */
     private function getCollection($name, $fields = [], $params = [], $defaults = []) {
 
         $instance = new Graph($name, array_merge($params, $defaults));
@@ -206,6 +228,13 @@ class Tribe {
         return $response;
     }
 
+    /**
+     * @param $name
+     * @param $fields
+     * @param $variables
+     * @param $params
+     * @return mixed
+     */
     private function createInstance($name, $fields = [], $variables = [], $params = []) {
 
         $mutation = new Mutation($name, array_merge($fields, [ 'input'=> new Variable('input', ucwords($name) . 'Input!', '') ]));
@@ -223,6 +252,15 @@ class Tribe {
 
         return $response;
     }
+
+    /**
+     * @param $name
+     * @param $fields
+     * @param $variables
+     * @param $params
+     * @param $instance
+     * @return mixed
+     */
     private function createInstanceName($name, $fields = [], $variables = [], $params = [], $instance) {
 
         $mutation = new Mutation($name, array_merge($fields, [ 'input'=> new Variable('input', $instance . 'Input!', '') ]));
@@ -241,6 +279,40 @@ class Tribe {
         return $response;
     }
 
+    /**
+     * @param $name
+     * @param $fields
+     * @param $variables
+     * @param $params
+     * @param $instance
+     * @return mixed
+     */
+    private function createInstanceNameArray($name, $fields = [], $variables = [], $params = [], $instance) {
+        $inputs = [];
+        foreach ($variables as $key => $value) {
+            $inputs[] = new Variable('input', $instance . 'Input!', '');
+        }
+        $fields['input'] = new Variable('input', "[".$instance . 'Input!'."]!", '');
+        $mutation = new Mutation($name, $fields);
+        $query = $this->generateNodeFields($mutation, $params);
+        $query = $query->root()->query();
+        $response = $this->request($query, $variables);
+
+        if(isset($response->data->$name)) {
+
+            return $response->data->$name;
+        }
+
+        return $response;
+    }
+
+
+    /**
+     * @param $name
+     * @param $type
+     * @param $value
+     * @return array
+     */
     private function mappingField($name, $type, $value) {
 
         if(in_array($type, ['text', 'html'])) $value = "\"{$value}\"";
@@ -252,6 +324,11 @@ class Tribe {
         ];
     }
 
+    /**
+     * @param $arguments
+     * @param $params
+     * @return mixed
+     */
     public function getPosts($arguments, $params) {
 
         $instance = new Graph('posts', $arguments);
@@ -261,6 +338,11 @@ class Tribe {
         return $response->data->posts;
     }
 
+    /**
+     * @param $arguments
+     * @param $params
+     * @return mixed
+     */
     public function getSpace($arguments, $params){
         $instance = new Graph('space', $arguments);
         $query = $this->generateNodeFields($instance, $params);
@@ -269,6 +351,11 @@ class Tribe {
         return $response;
     }
 
+    /**
+     * @param $arguments
+     * @param $params
+     * @return mixed
+     */
     public function getPost($arguments, $params){
         $instance = new Graph('post', $arguments);
         $query = $this->generateNodeFields($instance, $params);
@@ -277,6 +364,12 @@ class Tribe {
         return $response->data;
     }
 
+    /**
+     * @param $post_id
+     * @param $content
+     * @param $params
+     * @return mixed
+     */
     public function updatePost($post_id, $content, $params){
         $fields = ['id' => $post_id];
 
@@ -292,6 +385,15 @@ class Tribe {
 
         return $this->createInstance('updatePost', $fields, $variables, $params);
     }
+
+    /**
+     * @param $space_id
+     * @param $title
+     * @param $content
+     * @param $params
+     * @param $fields
+     * @return mixed
+     */
     public function createPost($space_id, $title, $content, $params = [], $fields = []) {
 
         $fields = array_merge(['spaceId' => $space_id], $fields);
@@ -310,6 +412,11 @@ class Tribe {
         return $this->createInstance('createPost', $fields, $variables, $params);
     }
 
+    /**
+     * @param $arguments
+     * @param $params
+     * @return mixed
+     */
     public function getSpaces($arguments, $params){
         $instance = new Graph('spaces', $arguments);
         $query = $this->generateNodeFields($instance, $params);
@@ -317,6 +424,11 @@ class Tribe {
         $response = $this->request($query);
         return $response->data;
     }
+
+    /**
+     * @param $params
+     * @return mixed
+     */
     public function getCollections($params){
         $instance = new Graph('collections');
         $query = $this->generateNodeFields($instance, $params);
@@ -324,6 +436,13 @@ class Tribe {
         $response = $this->request($query);
         return $response;
     }
+
+    /**
+     * @param $params
+     * @param $variables
+     * @param $input
+     * @return mixed
+     */
     public function updateSpace($params, $variables, $input) {
 
         $input = [
@@ -333,6 +452,13 @@ class Tribe {
         return $this->createInstance('updateSpace', $variables, $input, $params);
     }
 
+    /**
+     * @param $post_id
+     * @param $content
+     * @param $params
+     * @param $fields
+     * @return mixed
+     */
     public function createReply($post_id, $content, $params = [], $fields = []) {
 
         $fields = array_merge(['postId' => $post_id], $fields);
@@ -351,6 +477,13 @@ class Tribe {
         return $this->createInstanceName('createReply', $fields, $variables, $params, "CreatePost");
     }
 
+    /**
+     * @param $post_id
+     * @param $content
+     * @param $params
+     * @param $fields
+     * @return mixed
+     */
     public function createReplyV2($post_id, $content, $params = [], $fields = []) {
 
         $fields = array_merge(['postId' => $post_id], $fields);
@@ -367,6 +500,13 @@ class Tribe {
 
         return $this->createInstanceName('createReply', $fields, $variables, $params, "CreatePost");
     }
+
+    /**
+     * @param $params
+     * @param $variables
+     * @param $fields
+     * @return mixed
+     */
     public function createSpace($params = [], $variables = [], $fields = []) {
         /*  Params lo que quieres saber */
         /*  Fields parametros de un solo nivel*/
@@ -377,6 +517,12 @@ class Tribe {
         return $this->createInstance('createSpace', $fields, $variables, $params);
     }
 
+    /**
+     * @param $params
+     * @param $variables
+     * @param $fields
+     * @return mixed
+     */
     public function deleteSpace($params = [], $variables = [], $fields = []){
 
         $params = [
@@ -389,7 +535,14 @@ class Tribe {
         $response = $this->request($query);
         return $response;
     }
-    public function createImages( $variables = [], $params = [], $fields = []) {
+
+    /**
+     * @param $variables
+     * @param $params
+     * @param $fields
+     * @return mixed
+     */
+    public function createImages($variables = [], $params = [], $fields = []) {
 
         $variables = [
             'input' => $variables
@@ -410,7 +563,13 @@ class Tribe {
 
     }
 
-    public function updateMember( $variables = [], $params = [], $fields = []){
+    /**
+     * @param $variables
+     * @param $params
+     * @param $fields
+     * @return mixed
+     */
+    public function updateMember($variables = [], $params = [], $fields = []){
         $variables = [
             'input' => $variables
         ];
@@ -419,6 +578,11 @@ class Tribe {
         return $response;
     }
 
+    /**
+     * @param $arguments
+     * @param $params
+     * @return mixed
+     */
     public function getNotifications($arguments, $params) {
 
         $instance = new Graph('getNotifications', $arguments);
@@ -433,6 +597,10 @@ class Tribe {
         return $response;
     }
 
+    /**
+     * @param $params
+     * @return mixed
+     */
     public function getNotificationsCount($params) {
 
         $instance = new Graph('getNotificationsCount');
@@ -443,6 +611,10 @@ class Tribe {
         return $response->data;
     }
 
+    /**
+     * @param $arguments
+     * @return mixed
+     */
     public function readNotification($arguments){
         $mutation = new Mutation('readNotification');
         $mutation->readNotification($arguments)->use('status')->root()->query();
@@ -453,6 +625,11 @@ class Tribe {
         return $response->data->readNotification;
     }
 
+    /**
+     * @param $arguments
+     * @param $params
+     * @return mixed
+     */
     public function getReplies($arguments, $params){
         $instance = new Graph('replies', $arguments);
         $query = $this->generateNodeFields($instance, $params);
@@ -464,9 +641,20 @@ class Tribe {
         return $response->data;
     }
 
+    /**
+     * @param $arguments
+     * @param $params
+     * @param $variables
+     * @return mixed
+     */
     public function addReaction($arguments, $params, $variables){
         return $this->createInstance('addReaction', $arguments, $variables, $params);
     }
+
+    /**
+     * @param $arguments
+     * @return mixed
+     */
     public function removeReaction($arguments){
         $mutation = new Mutation('removeReaction');
 
@@ -482,12 +670,21 @@ class Tribe {
 
     }
 
+    /**
+     * @param $query
+     * @return mixed
+     */
     public function rawQuery($query){
         $response = $this->request($query);
         if(isset($response->errors)) return $response;
         return $response->data;
     }
 
+    /**
+     * @param $arguments
+     * @param $params
+     * @return mixed
+     */
     public function getFeed($arguments, $params){
         $instance = new Graph('feed', $arguments);
         $query = $this->generateNodeFields($instance, $params);
@@ -498,6 +695,10 @@ class Tribe {
         return $response->data->feed;
     }
 
+    /**
+     * @param $arguments
+     * @return mixed
+     */
     public function joinSpaceUser($arguments){
         $mutation = new Mutation('joinSpace');
 
@@ -517,6 +718,10 @@ class Tribe {
 
     }
 
+    /**
+     * @param $arguments
+     * @return mixed
+     */
     public function leaveSpace($arguments){
         $mutation = new Mutation('leaveSpace');
 
@@ -534,6 +739,10 @@ class Tribe {
 
     }
 
+    /**
+     * @param $space_id
+     * @return mixed
+     */
     public function removeAllMembers($space_id){
         $memberIds = [];
         $arguments = [
@@ -596,6 +805,11 @@ class Tribe {
 
     }
 
+    /**
+     * @param $memberId
+     * @param $params
+     * @return mixed
+     */
     public function getMemberSpaces($memberId, $params){
         $arguments = [
             "memberId" => $memberId,
@@ -607,6 +821,25 @@ class Tribe {
         $response = $this->request($query);
         if(isset($response->errors)) return $response;
         return $response->data;
+
+    }
+
+    /**
+     * @param $members
+     * @param $id
+     * @return mixed
+     */
+    public function addSpaceMembers($members, $id){
+        $params = [
+            "member" => [
+                "id",
+                "name"
+            ]
+        ];
+        $variables['input'] = $members;
+        $variables['spaceId'] = $id;
+        $fields = ["spaceId" =>  $id];
+        return $this->createInstanceNameArray('addSpaceMembers', $fields, $variables, $params, "AddSpaceMember");
 
     }
 }
