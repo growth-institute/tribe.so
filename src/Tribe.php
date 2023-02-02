@@ -242,7 +242,6 @@ class Tribe {
         $query = $this->generateNodeFields($mutation, $params);
 
         $query = $query->root()->query();
-
         $response = $this->request($query, $variables);
 
         if(isset($response->data->$name)) {
@@ -841,6 +840,22 @@ class Tribe {
         $fields = ["spaceId" =>  $id];
         return $this->createInstanceNameArray('addSpaceMembers', $fields, $variables, $params, "AddSpaceMember");
 
+    }
+
+    /**
+     * @param $members
+     * @param $id
+     * @return mixed
+     */
+    public function removeSpaceMembers($members, $id){
+        $arguments = ["memberIds" =>  $members, "spaceId" =>  $id];
+        $mutation = new Mutation('removeSpaceMembers');
+        $mutation->removeSpaceMembers($arguments)->use('status')->root()->query();
+        $query = $mutation;
+        $query = $query->root()->query();
+        $response = $this->request($query);
+        if(isset($response->errors)) return $response;
+        return $response->data;
     }
 }
 ?>
