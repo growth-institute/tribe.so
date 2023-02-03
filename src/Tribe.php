@@ -458,16 +458,15 @@ class Tribe {
      * @param $fields
      * @return mixed
      */
-    public function createReply($post_id, $content, $params = [], $fields = []) {
-
-        $fields = array_merge(['postId' => $post_id], $fields);
+    public function createReply($post_id, $content, $params = [], $member_id) {
+        $fields = ['postId' => $post_id];
 
         $variables = [
             'input' => [
-                'postTypeId' => 'udE3pz9DBGv7nsr',
+                'postTypeId' => 'fu1HHZaXZzs82C5',
                 'publish' => true,
+                'ownerId' => $member_id,
                 'mappingFields' => [
-                    $this->mappingField('title', 'text', ''),
                     $this->mappingField('content', 'html', $content)
                 ]
             ]
@@ -842,11 +841,6 @@ class Tribe {
 
     }
 
-    /**
-     * @param $members
-     * @param $id
-     * @return mixed
-     */
     public function removeSpaceMembers($members, $id){
         $arguments = ["memberIds" =>  $members, "spaceId" =>  $id];
         $mutation = new Mutation('removeSpaceMembers');
