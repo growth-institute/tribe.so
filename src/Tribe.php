@@ -164,6 +164,7 @@ class Tribe {
                 'Content-Type: application/json'
             ],
         ]);
+
         $response = curl_exec($curl);
         curl_close($curl);
 
@@ -296,7 +297,6 @@ class Tribe {
         $query = $this->generateNodeFields($mutation, $params);
         $query = $query->root()->query();
         $response = $this->request($query, $variables);
-
         if(isset($response->data->$name)) {
 
             return $response->data->$name;
@@ -350,6 +350,12 @@ class Tribe {
         return $response;
     }
 
+    public function getTemplateRequest($arguments, $params){
+        $instance = new Graph('templateRequest', $arguments);
+        $query = $this->generateNodeFields($instance, $params);
+        $query = $instance->root()->query();
+        return $this->request($query);
+    }
     /**
      * @param $arguments
      * @param $params
@@ -400,7 +406,7 @@ class Tribe {
         $variables = [
             'input' => [
                 'postTypeId' => 'udE3pz9DBGv7nsr',
-                'publish' => false,
+                'publish' => true,
                 'mappingFields' => [
                     $this->mappingField('title', 'text', $title),
                     $this->mappingField('content', 'html', $content)
@@ -512,7 +518,23 @@ class Tribe {
         $variables = [
             'input' => $variables
         ];
-        return $this->createInstance('createSpace', $fields, $variables, $params);
+        $fields['templateId'] = "pYCdmKZ3KZT8";
+        $response =  $this->createInstanceName('createSpaceFromTemplate', $fields, $variables, $params, 'CreateSpace');
+        return $response;
+    }
+
+    public function updatePostType($variables = [], $space_id) {
+        /*  Params lo que quieres saber */
+        /*  Fields parametros de un solo nivel*/
+        /*  Variables parametros de varios niveles */
+        $variables = [
+            'input' => $variables
+        ];
+        $fields['spaceId'] = $space_id;
+        $params = [
+        'spaceId'
+        ];
+        return $this->createInstanceNameArray('updateSpacePostTypes', $fields, $variables, $params, 'UpdateSpacePostType');
     }
 
     /**
