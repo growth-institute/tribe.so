@@ -518,8 +518,8 @@ class Tribe {
         $variables = [
             'input' => $variables
         ];
-        $fields['templateId'] = "pYCdmKZ3KZT8";
-        $response =  $this->createInstanceName('createSpaceFromTemplate', $fields, $variables, $params, 'CreateSpace');
+
+        $response =  $this->createInstance('createSpace', $fields, $variables, $params);
         return $response;
     }
 
@@ -532,7 +532,7 @@ class Tribe {
         ];
         $fields['spaceId'] = $space_id;
         $params = [
-        'spaceId'
+            'spaceId'
         ];
         return $this->createInstanceNameArray('updateSpacePostTypes', $fields, $variables, $params, 'UpdateSpacePostType');
     }
