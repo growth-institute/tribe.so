@@ -417,6 +417,25 @@ class Tribe {
         return $this->createInstance('createPost', $fields, $variables, $params);
     }
 
+    public function createPostFromMember($space_id, $title, $content, $params = [], $member_id, $fields = []) {
+
+        $fields = array_merge(['spaceId' => $space_id], $fields);
+
+        $variables = [
+            'input' => [
+                'postTypeId' => 'udE3pz9DBGv7nsr',
+                'publish' => true,
+                'ownerId' => $member_id,
+                'mappingFields' => [
+                    $this->mappingField('title', 'text', $title),
+                    $this->mappingField('content', 'html', $content)
+                ]
+            ]
+        ];
+
+        return $this->createInstance('createPost', $fields, $variables, $params);
+    }
+
     /**
      * @param $arguments
      * @param $params
