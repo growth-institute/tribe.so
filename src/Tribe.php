@@ -133,6 +133,7 @@ class Tribe {
         $instance = new Graph('members', $arguments);
         $query = $this->generateNodeFields($instance, $params);
         $query = $instance->root()->query();
+        $response = $this->request($query);
         if(isset($response->data)) return $response->data;
         return $response;
     }
