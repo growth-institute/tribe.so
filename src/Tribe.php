@@ -280,6 +280,23 @@ class Tribe {
         return $response;
     }
 
+	private function createInstanceWithVariables($name, $variables = [], $v_names = [], $params = []){
+		$wax_variables = [];
+		foreach($variables as $key => $value){
+			$wax_variables[$key] = new Variable($key, $v_names[$key], '');
+		}
+		$mutation = new Mutation($name, $wax_variables);
+		$query = $this->generateNodeFields($mutation, $params);
+		$query = $query->root()->query();
+		$response = $this->request($query, $variables);
+		if(isset($response->data->$name)) {
+
+			return $response->data->$name;
+		}
+
+		return $response;
+	}
+
     /**
      * @param $name
      * @param $fields
@@ -893,5 +910,9 @@ class Tribe {
         if(isset($response->errors)) return $response;
         return $response->data;
     }
+
+	public function updateMemberPostNotificationSettings($params, $variables, $v_names){
+		return $this->createInstanceWithVariables('updateMemberPostNotificationSettings', $variables, $v_names, $params);
+	}
 }
 ?>
