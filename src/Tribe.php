@@ -376,14 +376,14 @@ class Tribe {
      * @param $params
      * @return mixed
      */
-    public function updatePost($post_id, $content, $params){
+    public function updatePost($post_id, $content, $title,  $params){
         $fields = ['id' => $post_id];
 
         $variables = [
             'input' => [
                 'publish' => true,
                 'mappingFields' => [
-                    $this->mappingField('title', 'text', ""),
+                    $this->mappingField('title', 'text', $title),
                     $this->mappingField('content', 'html', $content),
                 ]
             ]
