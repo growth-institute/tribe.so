@@ -165,7 +165,6 @@ class Tribe {
                 'Content-Type: application/json'
             ],
         ]);
-
         $response = curl_exec($curl);
         curl_close($curl);
 
@@ -279,6 +278,43 @@ class Tribe {
 
         return $response;
     }
+
+	private function buildQueryWithVariables($name, $variables = [], $v_names = [], $params = [], $is_mutation){
+		$wax_variables = [];
+		foreach($variables as $key => $value){
+			$wax_variables[$key] = new Variable($key, $v_names[$key], '');
+		}
+		if($is_mutation){
+			$mutation = new Mutation($name, $wax_variables);
+		}else{
+			$mutation = new Graph($name, $wax_variables);
+		}
+		$query = $this->generateNodeFields($mutation, $params);
+		$query = $query->root()->query();
+		return $query;
+	}
+
+	private function createInstanceWithVariables($name, $variables = [], $v_names = [], $params = [], $is_mutation){
+		$wax_variables = [];
+		foreach($variables as $key => $value){
+			$wax_variables[$key] = new Variable($key, $v_names[$key], '');
+		}
+		if($is_mutation){
+			$mutation = new Mutation($name, $wax_variables);
+		}else{
+			$mutation = new Graph($name, $wax_variables);
+		}
+		$query = $this->generateNodeFields($mutation, $params);
+		$query = $query->root()->query();
+
+		$response = $this->request($query, $variables);
+		if(isset($response->data->$name)) {
+
+			return $response->data->$name;
+		}
+
+		return $response;
+	}
 
     /**
      * @param $name
@@ -400,7 +436,7 @@ class Tribe {
      * @param $fields
      * @return mixed
      */
-    public function createPost($space_id, $title, $content, $params = [], $fields = []) {
+    public function createPost($space_id, $title, $content, $params = [], $fields = [], $extra_options = []) {
 
         $fields = array_merge(['spaceId' => $space_id], $fields);
 
@@ -414,7 +450,9 @@ class Tribe {
                 ]
             ]
         ];
-
+		if(!empty($extra_options)){
+			$variables['input'] = array_merge($variables['input'], $extra_options);
+		}
         return $this->createInstance('createPost', $fields, $variables, $params);
     }
 
@@ -892,6 +930,29 @@ class Tribe {
         $response = $this->request($query);
         if(isset($response->errors)) return $response;
         return $response->data;
+    }
+
+	public function updateMemberPostNotificationSettings($params, $variables, $v_names){
+		return $this->createInstanceWithVariables('updateMemberPostNotificationSettings', $variables, $v_names, $params, true);
+	}
+	public function getPostsByTags($params, $variables, $v_names){
+		return  $this->createInstanceWithVariables('posts', $variables, $v_names, $params, false);
+	}
+
+	public function getTags($arguments, $params) {
+		$instance = new Graph('tags', $arguments);
+		$query = $this->generateNodeFields($instance, $params);
+		$query = $instance->root()->query();
+		$response = $this->request($query);
+		return $response->data;
+	}
+
+	public function createTag($params, $variables, $v_names){
+		return  $this->createInstanceWithVariables('createTag', $variables, $v_names, $params, true);
+	}
+
+    public function createGraphQLCall($name, $params, $variables, $v_names, $isMutation = false){
+        return  $this->createInstanceWithVariables($name, $variables, $v_names, $params, $isMutation);
     }
 }
 ?>
