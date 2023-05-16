@@ -950,5 +950,9 @@ class Tribe {
 	public function createTag($params, $variables, $v_names){
 		return  $this->createInstanceWithVariables('createTag', $variables, $v_names, $params, true);
 	}
+
+    public function createGraphQLCall($name, $params, $variables, $v_names, $isMutation = false){
+        return  $this->createInstanceWithVariables($name, $variables, $v_names, $params, $isMutation);
+    }
 }
 ?>
