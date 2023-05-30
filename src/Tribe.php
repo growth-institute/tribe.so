@@ -146,10 +146,16 @@ class Tribe {
     private function request($query, $variables = []) {
 
         $curl = curl_init();
+
         $graph_params = [
             'query' => $query,
             'variables' => $variables
         ];
+        /**
+         * Sanitize, fix characters to prevent errors on json_encoode for $graph_params and be sure chars are utf8
+         */
+        $graph_params = json_decode(json_encode($graph_params, JSON_UNESCAPED_UNICODE), true);
+
         curl_setopt_array($curl, [
             CURLOPT_URL => $this->baseUrl,
             CURLOPT_RETURNTRANSFER => true,
