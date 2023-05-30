@@ -137,21 +137,11 @@ class Tribe {
         if(isset($response->data)) return $response->data;
         return $response;
     }
-    function sanitize($array) {
-        $result = array();
-        foreach ($array as $key => $value) {
-            if (is_array($value)) {
-                $result[$key] = $this->sanitize($value);
-            } else {
-                // si es 1  = true o 0 es boolean false, convertir a boolean y no hacer mb_convert_encoding
-                if($value == 1 || $value == 0){
-                    $result[$key] = (bool)$value;
-                    continue;
-                }
-                $result[$key] = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
-            }
-        }
-        return $result;
+    function sanitize($content) {
+        // sanitize content to prevent tabs, newlines, etc from breaking the JSON, do not delete them replace them with HTML tags
+        $content = str_replace("\n", "<br>", $content);
+        $content = str_replace("\t", "&nbsp;&nbsp;&nbsp;&nbsp;", $content);
+        return $content;
     }
     /**
      * @param $query
