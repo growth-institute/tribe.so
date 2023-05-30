@@ -137,7 +137,22 @@ class Tribe {
         if(isset($response->data)) return $response->data;
         return $response;
     }
-
+    function sanitize($array) {
+        $result = array();
+        foreach ($array as $key => $value) {
+            if (is_array($value)) {
+                $result[$key] = $this->sanitize($value);
+            } else {
+                // si es 1  = true o 0 es boolean false, convertir a boolean y no hacer mb_convert_encoding
+                if($value == 1 || $value == 0){
+                    $result[$key] = (bool)$value;
+                    continue;
+                }
+                $result[$key] = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+            }
+        }
+        return $result;
+    }
     /**
      * @param $query
      * @param $variables
@@ -146,15 +161,10 @@ class Tribe {
     private function request($query, $variables = []) {
 
         $curl = curl_init();
-
         $graph_params = [
             'query' => $query,
             'variables' => $variables
         ];
-        /**
-         * Sanitize, fix characters to prevent errors on json_encoode for $graph_params and be sure chars are utf8
-         */
-        $graph_params = json_decode(json_encode($graph_params, JSON_UNESCAPED_UNICODE), true);
 
         curl_setopt_array($curl, [
             CURLOPT_URL => $this->baseUrl,
@@ -530,7 +540,8 @@ class Tribe {
      */
     public function createReply($post_id, $content, $params = [], $member_id) {
         $fields = ['postId' => $post_id];
-
+        // sanitiza content
+        $content = $this->sanitize($content);
         $variables = [
             'input' => [
                 'postTypeId' => 'fu1HHZaXZzs82C5',
@@ -555,7 +566,8 @@ class Tribe {
     public function createReplyV2($post_id, $content, $params = [], $fields = []) {
 
         $fields = array_merge(['postId' => $post_id], $fields);
-
+        // sanitiza content
+        $content = $this->sanitize($content);
         $variables = [
             'input' => [
                 'postTypeId' => 'fu1HHZaXZzs82C5',
