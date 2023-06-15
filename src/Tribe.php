@@ -356,7 +356,8 @@ class Tribe {
      * @return array
      */
     private function mappingField($name, $type, $value) {
-
+        // sanitiza value
+        $value = $this->sanitize($value);
         if(in_array($type, ['text', 'html'])) $value = "\"{$value}\"";
 
         return [
@@ -531,7 +532,7 @@ class Tribe {
     public function createReply($post_id, $content, $params = [], $member_id) {
         $fields = ['postId' => $post_id];
         // sanitiza content
-        $content = $this->sanitize($content);
+        // $content = $this->sanitize($content);
         $variables = [
             'input' => [
                 'postTypeId' => 'fu1HHZaXZzs82C5',
@@ -557,7 +558,7 @@ class Tribe {
 
         $fields = array_merge(['postId' => $post_id], $fields);
         // sanitiza content
-        $content = $this->sanitize($content);
+        // $content = $this->sanitize($content);
         $variables = [
             'input' => [
                 'postTypeId' => 'fu1HHZaXZzs82C5',
