@@ -410,7 +410,12 @@ class Tribe {
         $query = $this->generateNodeFields($instance, $params);
         $query = $instance->root()->query();
         $response = $this->request($query);
-        return $response->data;
+        if(isset($response->data->post)) {
+            return $response->data->post;
+        }
+        else{
+            return $response;
+        }
     }
 
     /**
