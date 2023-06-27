@@ -400,12 +400,13 @@ class Tribe {
         $query = $instance->root()->query();
         return $this->request($query);
     }
+    
     /**
      * @param $arguments
      * @param $params
      * @return mixed
      */
-    public function getPost($arguments, $params){
+    public function getParentPost($arguments, $params){
         $instance = new Graph('post', $arguments);
         $query = $this->generateNodeFields($instance, $params);
         $query = $instance->root()->query();
@@ -416,6 +417,19 @@ class Tribe {
         else{
             return $response;
         }
+    }
+
+    /**
+     * @param $arguments
+     * @param $params
+     * @return mixed
+     */
+    public function getPost($arguments, $params){
+        $instance = new Graph('post', $arguments);
+        $query = $this->generateNodeFields($instance, $params);
+        $query = $instance->root()->query();
+        $response = $this->request($query);
+        return $response->data;
     }
 
     /**
