@@ -153,9 +153,11 @@ class Tribe {
         $curl = curl_init();
         $graph_params = [
             'query' => $query,
-            'variables' => $variables
         ];
 
+        if(!empty($variables)) {
+            $graph_params['variables'] = $variables;
+        }
         curl_setopt_array($curl, [
             CURLOPT_URL => $this->baseUrl,
             CURLOPT_RETURNTRANSFER => true,
