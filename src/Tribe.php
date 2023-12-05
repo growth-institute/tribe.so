@@ -443,15 +443,20 @@ class Tribe {
     public function updatePost($post_id, $content, $title,  $params){
         $fields = ['id' => $post_id];
 
+        $mappingFields = [
+            $this->mappingField('content', 'html', $content),
+        ];
+        if (!empty(trim($title))) {
+            array_unshift($mappingFields, $this->mappingField('title', 'text', $title));
+        }
+        
         $variables = [
             'input' => [
                 'publish' => true,
-                'mappingFields' => [
-                    $this->mappingField('title', 'text', $title),
-                    $this->mappingField('content', 'html', $content),
-                ]
+                'mappingFields' => $mappingFields
             ]
         ];
+        
 
         return $this->createInstance('updatePost', $fields, $variables, $params);
     }
