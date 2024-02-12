@@ -34,7 +34,7 @@ class Tribe {
      * @param $memberId
      * @return mixed
      */
-    public function getAppToken($networkId, $url, $memberId = ''){
+    public static function getAppToken($networkId, $url, $memberId = ''){
         $arguments = [
             "context" => "NETWORK",
             "networkId" => $networkId,
