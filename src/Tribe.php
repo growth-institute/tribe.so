@@ -611,7 +611,7 @@ class Tribe {
         $variables = [
             'input' => $variables
         ];
-        $fields['templateId'] = "pYCdmKZ3KZT8";
+        $fields['templateId'] = "FVkNPhS7DPE8";
         $response =  $this->createInstanceName('createSpaceFromTemplate', $fields, $variables, $params, 'CreateSpace');
         return $response;
     }
