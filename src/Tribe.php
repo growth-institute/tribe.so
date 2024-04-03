@@ -493,6 +493,9 @@ class Tribe {
 
         $fields = array_merge(['spaceId' => $space_id], $fields);
 
+        /// remmote double quotes from content and title and replace them with single
+        $content = str_replace('"', "'", $content);
+        $title = str_replace('"', "'", $title);
         $variables = [
             'input' => [
                 'postTypeId' => 'udE3pz9DBGv7nsr',
